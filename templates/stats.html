@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>差分包项目统计</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #4a90e2;
+      --success-color: #28a745;
+      --fail-color: #dc3545;
+      --bg-color: #f5f7fa;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --border-color: #e1e4e8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .page-header h1 {
+      color: var(--primary-color);
+      font-size: 1.5rem;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      color: var(--text-color);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .btn-back:hover { background: #f0f4fb; }
+
+    .btn-refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      border: 1px solid #9bb8e8;
+      background: #eef5ff;
+      color: #2457a7;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .btn-refresh:hover { background: #dfeaff; }
+
+    /* 概览卡片 */
+    .overview-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 1.2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid var(--border-color);
+      text-align: center;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.82rem;
+      color: #6f7a8a;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .stat-card .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .stat-card.total .stat-value { color: var(--primary-color); }
+    .stat-card.success .stat-value { color: var(--success-color); }
+    .stat-card.failed .stat-value { color: var(--fail-color); }
+    .stat-card.rate .stat-value { color: #f0ad4e; }
+
+    /* 图表区域 */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .chart-box {
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 1.2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid var(--border-color);
+    }
+
+    .chart-box h3 {
+      font-size: 0.95rem;
+      color: #2f4f8f;
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 300px;
+    }
+
+    .chart-wrapper canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* 表格 */
+    .table-box {
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 1.2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid var(--border-color);
+      margin-bottom: 24px;
+    }
+
+    .table-box h3 {
+      font-size: 0.95rem;
+      color: #2f4f8f;
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    thead th {
+      background: #f4f7ff;
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+      font-weight: 700;
+      color: #2f4f8f;
+      border-bottom: 2px solid #d0deff;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 0.55rem 0.8rem;
+      border-bottom: 1px solid #edf2ff;
+    }
+
+    tbody tr:hover { background: #f8fbff; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .status-badge.success { background: #d4edda; color: #155724; }
+    .status-badge.failed { background: #f8d7da; color: #721c24; }
+    .status-badge.running { background: #d1ecf1; color: #0c5460; }
+    .status-badge.pending { background: #fff3cd; color: #856404; }
+    .status-badge.cancelled { background: #e2e3e5; color: #383d41; }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #9aa3b0;
+    }
+
+    .empty-state .empty-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .loading-overlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: #6f7a8a;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid #d0deff;
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 0.8rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .last-updated {
+      font-size: 0.75rem;
+      color: #9aa3b0;
+      margin-left: 0.6rem;
+      font-weight: 400;
+    }
+
+    @media (max-width: 640px) {
+      .charts-row {
+        grid-template-columns: 1fr;
+      }
+      .overview-cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="page-header">
+      <h1>差分包项目统计</h1>
+      <div class="header-actions">
+        <span class="last-updated" id="lastUpdated"></span>
+        <button class="btn-refresh" onclick="loadStats()" id="btnRefresh">刷新数据</button>
+        <a class="btn-back" href="/">← 返回主页</a>
+      </div>
+    </div>
+
+    <!-- 概览卡片 -->
+    <div class="overview-cards" id="overviewCards">
+      <div class="loading-overlay" style="grid-column: 1 / -1;">
+        <span class="loading-spinner"></span>加载中...
+      </div>
+    </div>
+
+    <!-- 图表 -->
+    <div class="charts-row">
+      <div class="chart-box">
+        <h3>各项目差分使用次数</h3>
+        <div class="chart-wrapper"><canvas id="projectChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>差分模式分布</h3>
+        <div class="chart-wrapper"><canvas id="modeChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 最近任务表格 -->
+    <div class="table-box">
+      <h3>最近差分记录</h3>
+      <div class="table-wrap">
+        <table id="recentTable">
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>项目</th>
+              <th>差分模式</th>
+              <th>旧版本</th>
+              <th>新版本</th>
+              <th>状态</th>
+              <th>触发人</th>
+            </tr>
+          </thead>
+          <tbody id="recentTbody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="page-header" style="justify-content: center; margin-top: 8px;">
+      <a class="btn-back" href="/">← 返回主页</a>
+    </div>
+  </div>
+
+  <script>
+    let projectChartInstance = null;
+    let modeChartInstance = null;
+
+    async function loadStats() {
+      const btn = document.getElementById('btnRefresh');
+      btn.disabled = true;
+      btn.textContent = '加载中...';
+
+      try {
+        const res = await fetch('/api/stats');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '未知错误');
+        renderStats(json.data);
+      } catch (err) {
+        console.error('加载统计数据失败:', err);
+        showError(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '刷新数据';
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('overviewCards').innerHTML =
+        `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⚠</div><p>加载失败: ${msg}</p></div>`;
+    }
+
+    function renderStats(data) {
+      // 更新时间
+      document.getElementById('lastUpdated').textContent =
+        '更新于 ' + new Date().toLocaleTimeString('zh-CN');
+
+      // 概览卡片
+      const o = data.overview;
+      document.getElementById('overviewCards').innerHTML = `
+        <div class="stat-card total">
+          <div class="stat-label">总任务数</div>
+          <div class="stat-value">${o.total}</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-label">成功数</div>
+          <div class="stat-value">${o.succeeded}</div>
+        </div>
+        <div class="stat-card failed">
+          <div class="stat-label">失败数</div>
+          <div class="stat-value">${o.failed}</div>
+        </div>
+        <div class="stat-card rate">
+          <div class="stat-label">成功率</div>
+          <div class="stat-value">${o.success_rate}%</div>
+        </div>
+      `;
+
+      // 项目排行图表
+      renderProjectChart(data.project_ranking);
+
+      // 模式分布图表
+      renderModeChart(data.mode_distribution);
+
+      // 最近任务表格
+      renderRecentTable(data.recent_tasks);
+    }
+
+    function renderProjectChart(ranking) {
+      const ctx = document.getElementById('projectChart').getContext('2d');
+      if (projectChartInstance) projectChartInstance.destroy();
+
+      if (!ranking.length) {
+        document.getElementById('projectChart').parentElement.innerHTML =
+          '<div class="empty-state"><p>暂无项目数据</p></div>';
+        return;
+      }
+
+      const labels = ranking.map(r => r.name);
+      const counts = ranking.map(r => r.count);
+
+      projectChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '差分次数',
+            data: counts,
+            backgroundColor: labels.map((_, i) => {
+              const hues = [210, 170, 280, 30, 340, 130, 50, 190, 310, 90, 220, 150];
+              const hue = hues[i % hues.length];
+              return `hsla(${hue}, 65%, 58%, 0.8)`;
+            }),
+            borderColor: labels.map((_, i) => {
+              const hues = [210, 170, 280, 30, 340, 130, 50, 190, 310, 90, 220, 150];
+              const hue = hues[i % hues.length];
+              return `hsl(${hue}, 65%, 45%)`;
+            }),
+            borderWidth: 1,
+            borderRadius: 6,
+            maxBarThickness: 60,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                afterLabel: function(ctx) {
+                  const versions = ranking[ctx.dataIndex].latest_versions;
+                  if (versions && versions.length) {
+                    return '最近版本: ' + versions.join(', ');
+                  }
+                  return '';
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1, precision: 0 },
+              grid: { color: '#edf2ff' }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { maxRotation: 45, minRotation: 0 }
+            }
+          }
+        }
+      });
+    }
+
+    function renderModeChart(distribution) {
+      const ctx = document.getElementById('modeChart').getContext('2d');
+      if (modeChartInstance) modeChartInstance.destroy();
+
+      if (!distribution.length) {
+        document.getElementById('modeChart').parentElement.innerHTML =
+          '<div class="empty-state"><p>暂无数据</p></div>';
+        return;
+      }
+
+      const labels = distribution.map(d => d.name);
+      const counts = distribution.map(d => d.count);
+      const colors = ['#4a90e2', '#28a745', '#f0ad4e'];
+
+      modeChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: counts,
+            backgroundColor: colors.slice(0, distribution.length),
+            borderColor: '#fff',
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 16,
+                usePointStyle: true,
+                pointStyleWidth: 10,
+                font: { size: 12 }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = total ? Math.round(ctx.parsed / total * 100) : 0;
+                  return ` ${ctx.label}: ${ctx.parsed} 次 (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderRecentTable(tasks) {
+      const tbody = document.getElementById('recentTbody');
+      if (!tasks.length) {
+        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>暂无任务记录</p></div></td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = tasks.map(t => {
+        const timeStr = t.created_at ? t.created_at.replace('T', ' ').slice(0, 19) : '—';
+        return `
+          <tr>
+            <td>${timeStr}</td>
+            <td><strong>${escapeHtml(t.project_name)}</strong></td>
+            <td>${escapeHtml(t.mode_label)}</td>
+            <td style="font-family:monospace;font-size:0.8rem;color:#6f7a8a;">${escapeHtml(t.old_version)}</td>
+            <td style="font-family:monospace;font-size:0.8rem;color:#6f7a8a;">${escapeHtml(t.new_version)}</td>
+            <td><span class="status-badge ${t.status}">${t.status_label}</span></td>
+            <td style="font-family:monospace;font-size:0.78rem;color:#999;">${escapeHtml(t.open_id)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // 页面加载时自动获取数据
+    loadStats();
+  </script>
+</body>
+</html>

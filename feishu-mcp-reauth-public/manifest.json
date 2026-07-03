@@ -1,0 +1,6 @@
+{
+  "name": "feishu-mcp-reauth-public",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Public-safe Feishu MCP reauthorization skill without personal auth state"
+}

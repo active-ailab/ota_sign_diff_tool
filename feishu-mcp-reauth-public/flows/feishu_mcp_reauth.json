@@ -1,0 +1,149 @@
+{
+  "start": "open_page",
+  "settings": {
+    "headless": true,
+    "timeout_ms": 20000,
+    "storage_state": "state/feishu_mcp_auth.json",
+    "save_storage_state": "state/feishu_mcp_auth.json"
+  },
+  "steps": [
+    {
+      "id": "open_page",
+      "action": "open",
+      "url": "https://open.feishu.cn/page/mcp/7615508457076231131",
+      "wait_until": "domcontentloaded",
+      "next": "check_login_redirect"
+    },
+    {
+      "id": "check_login_redirect",
+      "action": "url_check",
+      "expect_any": [
+        "accounts.feishu.cn/accounts/page/login"
+      ],
+      "on_true": "finish_login_required",
+      "next": "wait_reauth"
+    },
+    {
+      "id": "wait_manual_login",
+      "action": "wait_url_not_contains",
+      "substring": "accounts.feishu.cn/accounts/page/login",
+      "timeout_ms": 600000,
+      "next": "wait_reauth"
+    },
+    {
+      "id": "wait_reauth",
+      "action": "wait_text",
+      "text": "重新授权",
+      "timeout_ms": 20000,
+      "next": "capture_before"
+    },
+    {
+      "id": "capture_before",
+      "action": "screenshot",
+      "path": "before-reauth.png",
+      "next": "click_reauth"
+    },
+    {
+      "id": "click_reauth",
+      "action": "click",
+      "text": "重新授权",
+      "timeout_ms": 15000,
+      "next": "wait_dialog"
+    },
+    {
+      "id": "wait_dialog",
+      "action": "wait_text",
+      "text": "飞书 MCP请求你的授权",
+      "frame_url_contains": "accounts.feishu.cn/open-apis/authen/v1/authorize",
+      "timeout_ms": 20000,
+      "next": "capture_dialog"
+    },
+    {
+      "id": "capture_dialog",
+      "action": "screenshot",
+      "path": "auth-dialog.png",
+      "next": "click_authorize"
+    },
+    {
+      "id": "click_authorize",
+      "action": "click",
+      "role": "button",
+      "name": "授权",
+      "frame_url_contains": "accounts.feishu.cn/open-apis/authen/v1/authorize",
+      "timeout_ms": 15000,
+      "next": "wait_success_toast"
+    },
+    {
+      "id": "wait_success_toast",
+      "action": "wait_text",
+      "text": "重新授权成功",
+      "timeout_ms": 20000,
+      "next": "wait_expiry_line"
+    },
+    {
+      "id": "wait_expiry_line",
+      "action": "wait_text",
+      "text": "该链接将于",
+      "timeout_ms": 20000,
+      "next": "capture_after"
+    },
+    {
+      "id": "capture_after",
+      "action": "screenshot",
+      "path": "after-reauth.png",
+      "next": "ocr_verify"
+    },
+    {
+      "id": "ocr_verify",
+      "action": "ocr_check",
+      "expect_all": [
+        "重新授权",
+        "自动失效"
+      ],
+      "expect_generated_all": [
+        {
+          "type": "date_plus_days",
+          "days": 7,
+          "format": "%Y年%m月%d日"
+        }
+      ],
+      "on_true": "finish_ok",
+      "on_false": "dom_verify"
+    },
+    {
+      "id": "dom_verify",
+      "action": "page_text_check",
+      "expect_all": [
+        "重新授权",
+        "自动失效"
+      ],
+      "expect_generated_all": [
+        {
+          "type": "date_plus_days",
+          "days": 7,
+          "format": "%Y年%m月%d日"
+        }
+      ],
+      "expect_regex_all": [
+        "该链接将于\\s*\\d{4}年\\d{2}月\\d{2}日"
+      ],
+      "on_true": "finish_ok",
+      "on_false": "finish_fail"
+    },
+    {
+      "id": "finish_login_required",
+      "action": "finish",
+      "status": "login-required"
+    },
+    {
+      "id": "finish_ok",
+      "action": "finish",
+      "status": "reauth-verified"
+    },
+    {
+      "id": "finish_fail",
+      "action": "finish",
+      "status": "reauth-check-failed"
+    }
+  ]
+}

@@ -1,0 +1,1482 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>飞书通知测试</title>
+    <style>
+        :root {
+            --bg-1: #0d1321;
+            --bg-2: #16213e;
+            --card: rgba(255, 255, 255, 0.08);
+            --card-border: rgba(255, 255, 255, 0.14);
+            --text: #eef2ff;
+            --muted: #b6c0df;
+            --accent: #7dd3fc;
+            --accent-strong: #38bdf8;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --danger: #f87171;
+            --field: rgba(255, 255, 255, 0.95);
+            --field-text: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            font-family: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+            background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.25), transparent 28%), radial-gradient(circle at 85% 20%, rgba(52, 211, 153, 0.18), transparent 22%), linear-gradient(135deg, var(--bg-1), var(--bg-2));
+        }
+
+        .shell {
+            width: min(1120px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 28px 0 40px;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+            gap: 18px;
+            align-items: stretch;
+            margin-bottom: 18px;
+        }
+
+        .hero-panel,
+        .card {
+            border: 1px solid var(--card-border);
+            background: var(--card);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 22px;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
+        }
+
+        .hero-panel {
+            padding: 28px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(125, 211, 252, 0.12);
+            color: var(--accent);
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 14px 0 12px;
+            font-size: clamp(28px, 4vw, 44px);
+            line-height: 1.05;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.7;
+            max-width: 760px;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: #f8fbff;
+            font-size: 13px;
+        }
+
+        .stats {
+            display: grid;
+            gap: 12px;
+        }
+
+        .stat {
+            padding: 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 12px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            margin-top: 10px;
+            font-size: 18px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .stat-value.ok {
+            color: var(--success);
+        }
+
+        .stat-value.warn {
+            color: var(--warning);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+            gap: 18px;
+        }
+
+        .card {
+            padding: 22px;
+        }
+
+        .card h2 {
+            margin: 0 0 12px;
+            font-size: 18px;
+        }
+
+        .card p {
+            margin: 0 0 14px;
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #e5ecff;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 14px;
+            background: var(--field);
+            color: var(--field-text);
+            font: inherit;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        }
+
+        input,
+        select {
+            padding: 12px 14px;
+        }
+
+        textarea {
+            min-height: 160px;
+            resize: vertical;
+            padding: 14px;
+            line-height: 1.6;
+        }
+
+        input[readonly] {
+            background: #edf2ff;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .btn {
+            appearance: none;
+            border: 0;
+            border-radius: 14px;
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-strong), #0ea5e9);
+            color: white;
+            box-shadow: 0 14px 28px rgba(14, 165, 233, 0.28);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .status-box,
+        .log-box {
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(10, 15, 30, 0.72);
+        }
+
+        .status-box {
+            padding: 16px;
+            margin-top: 14px;
+        }
+
+        .status-title {
+            font-size: 13px;
+            color: #9cc8ff;
+            margin-bottom: 10px;
+        }
+
+        .status-line {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: #e7eefc;
+            font-size: 14px;
+        }
+
+        .log-box {
+            margin-top: 16px;
+            padding: 14px;
+            min-height: 240px;
+            max-height: 420px;
+            overflow: auto;
+            font-family: "Cascadia Code", "Consolas", monospace;
+            font-size: 12.5px;
+            line-height: 1.65;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .log-line {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .log-ok {
+            color: #86efac;
+        }
+
+        .log-warn {
+            color: #fbbf24;
+        }
+
+        .log-error {
+            color: #fca5a5;
+        }
+
+        .footer-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+
+        .muted-link {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .muted-link:hover {
+            text-decoration: underline;
+        }
+
+        .hint {
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .domain-check {
+            margin-top: 18px;
+            padding: 20px 22px;
+        }
+
+        .check-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .check-item {
+            padding: 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .check-label {
+            color: var(--muted);
+            font-size: 12px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .check-value {
+            margin-top: 8px;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+
+        .check-value.ok {
+            color: var(--success);
+        }
+
+        .check-value.warn {
+            color: var(--warning);
+        }
+
+        .check-list {
+            margin: 12px 0 0;
+            padding-left: 18px;
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .check-list li+li {
+            margin-top: 6px;
+        }
+
+        @media (max-width: 920px) {
+            .hero,
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .check-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <!-- 优先引入飞书最新JSSDK -->
+    <script src="https://lf1-cdn-tos.bytegoofy.com/goofy/lark/op/h5-js-sdk-1.5.16.js"></script>
+</head>
+
+<body>
+    <main class="shell">
+        <section class="hero">
+            <div class="hero-panel">
+                <div class="eyebrow">Feishu Notification Test</div>
+                <h1>独立测试飞书用户身份和私信通知</h1>
+                <p class="subtitle">
+                    这个页面只做一件事：先获取当前飞书用户的身份，再把一条测试消息发给这个用户。 你可以先在这里验证 open_id / user_id 是否可用，确认通知链路打通之后，再把同样的发送逻辑接回主业务。
+                </p>
+                <div class="chip-row">
+                    <span class="chip">身份获取</span>
+                    <span class="chip">测试发送</span>
+                    <span class="chip">独立页面</span>
+                    <span class="chip">可回退手动填写</span>
+                </div>
+            </div>
+            <aside class="stats">
+                <div class="stat">
+                    <div class="stat-label">当前环境</div>
+                    <div class="stat-value" id="envValue">加载中...</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">消息发送能力</div>
+                    <div class="stat-value warn" id="sendValue">检查中...</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">默认接收人</div>
+                    <div class="stat-value" id="defaultReceiverValue">未配置</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">鉴权状态</div>
+                    <div class="stat-value warn" id="authStatusValue">未鉴权</div>
+                </div>
+            </aside>
+        </section>
+
+        <section class="card domain-check">
+            <h2>域名排查</h2>
+            <p>
+                这块只看一件事：当前页面的 origin 是否已经被飞书开放平台允许注入 JSAPI。 如果这里显示正常，但桥接对象还是没有注入，优先检查应用后台里的网页访问域名和 JSAPI 安全域名白名单。
+            </p>
+            <div class="check-grid">
+                <div class="check-item">
+                    <div class="check-label">当前 origin</div>
+                    <div class="check-value" id="originValue">加载中...</div>
+                </div>
+                <div class="check-item">
+                    <div class="check-label">页面地址</div>
+                    <div class="check-value" id="pageUrlValue">加载中...</div>
+                </div>
+                <div class="check-item">
+                    <div class="check-label">需要核对的白名单</div>
+                    <div class="check-value" id="whitelistValue">网页访问域名 / JSAPI 安全域名</div>
+                </div>
+                <div class="check-item">
+                    <div class="check-label">当前判断</div>
+                    <div class="check-value warn" id="bridgeHintValue">等待检测...</div>
+                </div>
+            </div>
+            <ul class="check-list">
+                <li>确认飞书应用后台里已添加当前域名（需包含 https://、域名、端口、结尾 /）。</li>
+                <li>确认当前地址是可被飞书直接访问的 HTTPS 域名，而不是临时跳转地址。</li>
+                <li>如果桥接对象一直是空，优先看飞书客户端里的网页域名授权，而不是后端接口。</li>
+                <li>鉴权失败请查看控制台错误码，333447=安全域名未设置，333448=页面不在安全域名内。</li>
+            </ul>
+        </section>
+
+        <section class="grid">
+            <article class="card">
+                <h2>1. 获取飞书身份</h2>
+                <p>
+                    有两种方式获取用户身份标识：
+                    <br><strong>方式A（JSAPI）</strong>：在飞书容器内通过 tt.requestAuthCode 自动获取（需 HTTPS 域名）。
+                    <br><strong>方式B（OAuth 网页授权）</strong>：跳转飞书授权页，用户确认后回调获取身份（<em>内网 HTTP 环境推荐</em>）。
+                </p>
+
+                <div class="button-row">
+                    <button type="button" class="btn btn-primary" id="btnFetchIdentity">A. JSAPI 获取身份</button>
+                    <button type="button" class="btn btn-primary" id="btnOAuthAuthorize" style="background: linear-gradient(135deg, #34d399, #059669); box-shadow: 0 14px 28px rgba(5,150,105,0.28);">B. OAuth 网页授权</button>
+                    <button type="button" class="btn btn-secondary" id="btnLoadDefault">加载默认配置</button>
+                    <button type="button" class="btn btn-secondary" id="btnCheckAuth">重新鉴权</button>
+                    <a class="btn btn-ghost" href="/">返回主页面</a>
+                </div>
+
+                <div class="status-box">
+                    <div class="status-title">身份状态</div>
+                    <div class="status-line" id="identityStatus">等待操作...</div>
+                </div>
+
+                <div class="form-group" style="margin-top: 14px;">
+                    <label for="receiveIdType">接收人类型</label>
+                    <select id="receiveIdType">
+                        <option value="open_id">open_id</option>
+                        <option value="user_id">user_id</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="receiveId">接收人标识</label>
+                    <input id="receiveId" type="text" placeholder="open_id / user_id" />
+                </div>
+
+                <div class="form-group">
+                    <label for="openId">open_id</label>
+                    <input id="openId" type="text" readonly placeholder="点击获取飞书身份后自动填充" />
+                </div>
+
+                <div class="form-group">
+                    <label for="userId">user_id</label>
+                    <input id="userId" type="text" readonly placeholder="点击获取飞书身份后自动填充" />
+                </div>
+
+                <div class="form-group">
+                    <label for="unionId">union_id</label>
+                    <input id="unionId" type="text" readonly placeholder="点击获取飞书身份后自动填充" />
+                </div>
+
+                <div class="hint">
+                    提示：如果你是在飞书容器里打开页面，身份按钮会自动获取用户信息；如果不是容器，可以把已有的 open_id 或 user_id 手动填进来继续测试发送。
+                </div>
+            </article>
+
+            <article class="card">
+                <h2>2. 发送测试通知</h2>
+                <p>
+                    这条消息只用于验证“当前用户是否能收到飞书私信”。内容会通过后端的租户 access token 发送到指定接收人。
+                </p>
+
+                <div class="form-group">
+                    <label for="messageText">测试内容</label>
+                    <textarea id="messageText" placeholder="请输入要发送的测试消息"></textarea>
+                </div>
+
+                <div class="button-row">
+                    <button type="button" class="btn btn-primary" id="btnSendTest">发送测试消息</button>
+                    <button type="button" class="btn btn-secondary" id="btnResetLog">清空日志</button>
+                </div>
+
+                <div class="status-box">
+                    <div class="status-title">发送状态</div>
+                    <div class="status-line" id="sendStatus">尚未发送。</div>
+                </div>
+
+                <div class="log-box" id="logBox"></div>
+            </article>
+        </section>
+    </main>
+
+    <script type="application/json" id="feishu-sdk-urls">
+        {{ feishu_sdk_urls | default([]) | tojson }}
+    </script>
+
+    <script>
+        const FEISHU_SDK_URLS = JSON.parse(document.getElementById("feishu-sdk-urls")?.textContent || "[]");
+
+        const state = {
+            appId: "",
+            enabled: false,
+            sendMessageEnabled: false,
+            defaultReceiveId: "",
+            defaultReceiveIdType: "open_id",
+            sdkLoadErrors: [],
+            authSuccess: false, // 新增：鉴权状态
+            authConfig: null,   // 新增：鉴权参数
+        };
+
+        const el = {
+            envValue: document.getElementById("envValue"),
+            sendValue: document.getElementById("sendValue"),
+            defaultReceiverValue: document.getElementById("defaultReceiverValue"),
+            originValue: document.getElementById("originValue"),
+            pageUrlValue: document.getElementById("pageUrlValue"),
+            whitelistValue: document.getElementById("whitelistValue"),
+            bridgeHintValue: document.getElementById("bridgeHintValue"),
+            identityStatus: document.getElementById("identityStatus"),
+            sendStatus: document.getElementById("sendStatus"),
+            logBox: document.getElementById("logBox"),
+            receiveIdType: document.getElementById("receiveIdType"),
+            receiveId: document.getElementById("receiveId"),
+            openId: document.getElementById("openId"),
+            userId: document.getElementById("userId"),
+            unionId: document.getElementById("unionId"),
+            messageText: document.getElementById("messageText"),
+            btnFetchIdentity: document.getElementById("btnFetchIdentity"),
+            btnOAuthAuthorize: document.getElementById("btnOAuthAuthorize"),
+            btnLoadDefault: document.getElementById("btnLoadDefault"),
+            btnSendTest: document.getElementById("btnSendTest"),
+            btnResetLog: document.getElementById("btnResetLog"),
+            btnCheckAuth: document.getElementById("btnCheckAuth"),
+            authStatusValue: document.getElementById("authStatusValue"),
+        };
+
+        // 新增：错误码解析函数
+        function parseFeishuErrorCode(errorMsg) {
+            const errorCodeMap = {
+                333447: "安全域名未设置 → 检查H5可信域名是否包含https://diff-tool.zepp.top:5000/",
+                333448: "页面不在安全域名内 → 当前页面URL必须为https://diff-tool.zepp.top:5000/（无额外路径/参数）",
+                333441: "签名错误 → 检查：1.URL为当前页面完整URL（不含#后内容）；2.nonceStr/timestamp与服务端一致；3.jsapi_ticket为最新（有效期2小时）",
+                333445: "JSAPI未授权 → jsApiList中未声明要调用的接口（如'tt.requestAuthCode'）",
+                2602002: "网页URL未在飞书应用后台配置 → 请到飞书开放平台→应用→安全设置→添加「网页应用」URL（需包含完整路径）",
+                10236: "无效的URL → 当前页面地址未在飞书应用后台的「网页应用」白名单中",
+                104: "鉴权参数无效(h5sdk.config) → 可能原因：1.timestamp需为整数；2.签名URL必须与当前页面完全一致；3.jsapi_ticket过期（有效期2小时）",
+            };
+            const codeMatch = errorMsg.match(/(\d{6})/);
+            if (codeMatch && errorCodeMap[codeMatch[1]]) {
+                return `【错误码${codeMatch[1]}】${errorCodeMap[codeMatch[1]]}`;
+            }
+            return errorMsg;
+        }
+
+        function appendLog(text, level = "info") {
+            const line = document.createElement("span");
+            line.className = "log-line";
+            if (level === "ok") {
+                line.classList.add("log-ok");
+            } else if (level === "warn") {
+                line.classList.add("log-warn");
+            } else if (level === "error") {
+                line.classList.add("log-error");
+            }
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            el.logBox.appendChild(line);
+            el.logBox.scrollTop = el.logBox.scrollHeight;
+        }
+
+        function setIdentityStatus(text, level = "info") {
+            el.identityStatus.textContent = text;
+            el.identityStatus.style.color = level === "ok" ? "var(--success)" : level === "warn" ? "var(--warning)" : level === "error" ? "var(--danger)" : "#e7eefc";
+        }
+
+        function setSendStatus(text, level = "info") {
+            el.sendStatus.textContent = text;
+            el.sendStatus.style.color = level === "ok" ? "var(--success)" : level === "warn" ? "var(--warning)" : level === "error" ? "var(--danger)" : "#e7eefc";
+        }
+
+        // 新增：设置鉴权状态
+        function setAuthStatus(text, level = "info") {
+            el.authStatusValue.textContent = text;
+            el.authStatusValue.className = `stat-value ${level === "ok" ? "ok" : "warn"}`;
+        }
+
+        function maskValue(value) {
+            const text = String(value || "");
+            if (!text) {
+                return "未配置";
+            }
+            if (text.length <= 10) {
+                return text;
+            }
+            return `${text.slice(0, 5)}...${text.slice(-4)}`;
+        }
+
+        function getFeishuBridge() {
+            const candidates = [
+                ["tt", window.tt],
+                ["lark", window.lark],
+                ["h5sdk", window.h5sdk],
+                ["TT", window.TT],
+            ];
+
+            for (const [name, api] of candidates) {
+                if (api && typeof api.requestAuthCode === "function") {
+                    return {
+                        name,
+                        api
+                    };
+                }
+                if (api && api.tt && typeof api.tt.requestAuthCode === "function") {
+                    return {
+                        name: `${name}.tt`,
+                        api: api.tt
+                    };
+                }
+                if (api && api.h5sdk && typeof api.h5sdk.requestAuthCode === "function") {
+                    return {
+                        name: `${name}.h5sdk`,
+                        api: api.h5sdk
+                    };
+                }
+            }
+
+            return null;
+        }
+
+        function describeBridgeState() {
+            const states = [
+                `tt=${window.tt ? "yes" : "no"}`,
+                `lark=${window.lark ? "yes" : "no"}`,
+                `h5sdk=${window.h5sdk ? "yes" : "no"}`,
+                `TT=${window.TT ? "yes" : "no"}`,
+            ];
+            return states.join(", ");
+        }
+
+        function describePageSecurityState() {
+            const host = window.location.hostname || "";
+            const protocol = window.location.protocol || "";
+            const fullUrl = window.location.href || "";
+            const userAgent = window.navigator.userAgent || "";
+            const openInBrowser = new URLSearchParams(window.location.search || "").get("open_in_browser") === "true";
+            const isLocalHost =
+                host === "localhost" ||
+                host === "127.0.0.1" ||
+                host === "0.0.0.0" ||
+                /^10\./.test(host) ||
+                /^192\.168\./.test(host) ||
+                /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+            const inFeishuClient = /feishu|lark/i.test(userAgent);
+            return `protocol=${protocol || "unknown"}, host=${host || "unknown"}, local_ip=${isLocalHost ? "yes" : "no"}, open_in_browser=${openInBrowser ? "true" : "false"}, in_feishu=${inFeishuClient ? "yes" : "no"}, url=${fullUrl}`;
+        }
+
+        function explainAccessConstraint() {
+            const host = window.location.hostname || "";
+            const protocol = window.location.protocol || "";
+            const userAgent = window.navigator.userAgent || "";
+            const isHttp = protocol === "http:";
+            const isPrivateIp =
+                /^10\./.test(host) ||
+                /^192\.168\./.test(host) ||
+                /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+            const inFeishuClient = /feishu|lark/i.test(userAgent);
+
+            if (!inFeishuClient) {
+                return "当前页面看起来不是在飞书客户端内打开。即使 HTTPS 可访问，也不会注入飞书 JSAPI，因此无法获取授权码。";
+            }
+
+            if (isHttp && isPrivateIp) {
+                return "当前是内网 HTTP 地址，飞书容器通常不会注入 JSAPI。请改成飞书允许的 HTTPS 可访问域名后再测。";
+            }
+
+            if (isHttp) {
+                return "当前是 HTTP 地址，飞书容器可能会限制 JSAPI。优先改成 HTTPS 再测试。";
+            }
+
+            return "当前地址看起来符合基础要求，若仍失败，继续看浏览器桥接对象和应用配置。";
+        }
+
+        function describeSdkLoadState() {
+            return state.sdkLoadErrors.length ?
+                `sdk_load_errors=${state.sdkLoadErrors.join(" | ")}` :
+                "sdk_load_errors=none";
+        }
+
+        function describeSdkCandidates() {
+            return FEISHU_SDK_URLS.length ? `sdk_candidates=${FEISHU_SDK_URLS.join(" | ")}` : "sdk_candidates=none";
+        }
+
+        function updateDomainCheck() {
+            const origin = window.location.origin || `${window.location.protocol}//${window.location.host}`;
+            const fullUrl = window.location.href || "";
+            const host = window.location.host || "";
+            const protocol = window.location.protocol || "";
+            const bridge = getFeishuBridge();
+
+            if (el.originValue) {
+                el.originValue.textContent = origin;
+            }
+            if (el.pageUrlValue) {
+                el.pageUrlValue.textContent = fullUrl;
+            }
+            if (el.whitelistValue) {
+                el.whitelistValue.textContent = `网页访问域名: ${host || "unknown"} | JSAPI 安全域名: ${origin}/`;
+            }
+            if (el.bridgeHintValue) {
+                if (bridge) {
+                    el.bridgeHintValue.textContent = `已检测到桥接对象: ${bridge.name}`;
+                    el.bridgeHintValue.className = "check-value ok";
+                } else if (protocol === "https:") {
+                    el.bridgeHintValue.textContent = "未检测到桥接对象。优先检查飞书应用后台的网页访问域名 / JSAPI 安全域名白名单（需包含https://diff-tool.zepp.top:5000/）。";
+                    el.bridgeHintValue.className = "check-value warn";
+                } else {
+                    el.bridgeHintValue.textContent = "当前不是 HTTPS，飞书容器通常不会注入 JSAPI。";
+                    el.bridgeHintValue.className = "check-value warn";
+                }
+            }
+        }
+
+        updateDomainCheck();
+
+        function waitForBridgeInjection(timeoutMs = 8000) {
+            return new Promise((resolve) => {
+                const startAt = Date.now();
+
+                const tick = () => {
+                    if (getFeishuBridge()) {
+                        resolve(true);
+                        return;
+                    }
+
+                    if (Date.now() - startAt >= timeoutMs) {
+                        resolve(false);
+                        return;
+                    }
+
+                    window.setTimeout(tick, 200);
+                };
+
+                tick();
+            });
+        }
+
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const existing = document.querySelector(`script[data-feishu-sdk="${src}"]`);
+                if (existing) {
+                    if (existing.dataset.loaded === "true") {
+                        resolve();
+                        return;
+                    }
+                    existing.addEventListener("load", () => resolve(), {
+                        once: true
+                    });
+                    existing.addEventListener("error", () => reject(new Error(`加载失败: ${src}`)), {
+                        once: true
+                    });
+                    return;
+                }
+
+                const script = document.createElement("script");
+                script.src = src;
+                script.async = true;
+                script.dataset.feishuSdk = src;
+                script.onload = () => {
+                    script.dataset.loaded = "true";
+                    resolve();
+                };
+                script.onerror = () => {
+                    const errorText = `加载失败: ${src}`;
+                    state.sdkLoadErrors.push(errorText);
+                    reject(new Error(errorText));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        function waitForFeishuReady(bridge, timeoutMs = 5000) {
+            return new Promise((resolve, reject) => {
+                const readyFn = bridge && bridge.ready;
+                if (typeof readyFn !== "function") {
+                    resolve(true);
+                    return;
+                }
+
+                let settled = false;
+                const finish = (ok, value) => {
+                    if (settled) {
+                        return;
+                    }
+                    settled = true;
+                    window.clearTimeout(timerId);
+                    if (ok) {
+                        resolve(value);
+                    } else {
+                        reject(value instanceof Error ? value : new Error(String(value)));
+                    }
+                };
+
+                const timerId = window.setTimeout(() => {
+                    finish(false, new Error("飞书 SDK 初始化超时，请确认页面已在飞书容器中完全加载"));
+                }, timeoutMs);
+
+                try {
+                    readyFn.call(bridge, () => finish(true, true));
+                } catch (error) {
+                    finish(false, error);
+                }
+            });
+        }
+
+        async function ensureFeishuSdk() {
+            const bridge = getFeishuBridge();
+            if (bridge) {
+                return bridge;
+            }
+
+            appendLog("[INFO] 等待飞书桥接对象注入...", "info");
+            const injected = await waitForBridgeInjection(8000);
+            if (injected) {
+                return getFeishuBridge();
+            }
+            appendLog("[WARN] 等待飞书桥接注入超时，开始尝试 SDK 回退加载...", "warn");
+
+            for (const src of FEISHU_SDK_URLS) {
+                try {
+                    await loadScript(src);
+                    const loadedBridge = getFeishuBridge();
+                    if (loadedBridge) {
+                        return loadedBridge;
+                    }
+                } catch (_) {
+                    continue;
+                }
+            }
+
+            return getFeishuBridge();
+        }
+
+        function fillIdentity(info) {
+            const openId = (info && info.open_id) || "";
+            const userId = (info && info.user_id) || "";
+            const unionId = (info && info.union_id) || "";
+            const receiveId = (info && (info.receive_id || info.open_id || info.user_id)) || "";
+            const receiveIdType = (info && info.receive_id_type) || (openId ? "open_id" : userId ? "user_id" : "open_id");
+
+            el.openId.value = openId;
+            el.userId.value = userId;
+            el.unionId.value = unionId;
+            el.receiveId.value = receiveId;
+            el.receiveIdType.value = receiveIdType;
+        }
+
+        // 新增：获取鉴权参数（后端接口）
+        async function getAuthConfig() {
+            try {
+                // 获取当前页面URL（不含#后内容，符合飞书鉴权要求）
+                const currentUrl = window.location.href.split('#')[0];
+                const res = await fetch("/api/feishu/auth-config", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ url: currentUrl })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.msg || "获取鉴权参数失败");
+                }
+                state.authConfig = data.data;
+                return data.data;
+            } catch (error) {
+                appendLog(`[ERROR] 获取鉴权参数失败：${error.message}`, "error");
+                setAuthStatus("鉴权参数获取失败", "warn");
+                throw error;
+            }
+        }
+
+        // 新增：执行h5sdk.config鉴权（仅 h5sdk 桥接需要；tt 原生桥接不需要）
+        async function doFeishuAuth() {
+            if (!state.appId) {
+                throw new Error("未获取到appId，无法鉴权");
+            }
+
+            // 检查 h5sdk 是否可用（tt 桥接不需要鉴权）
+            if (!window.h5sdk || typeof window.h5sdk.config !== "function") {
+                const bridge = getFeishuBridge();
+                if (bridge && bridge.name === 'tt') {
+                    appendLog("[INFO] 检测到飞书原生桥接(tt)，无需 h5sdk.config 鉴权。", "ok");
+                    setAuthStatus("原生桥接(tt)，无需鉴权", "ok");
+                    state.authSuccess = true;
+                    return;
+                }
+                throw new Error("h5sdk 未加载，无法执行鉴权。如果是飞书容器内打开，通常 window.tt 会自动可用。");
+            }
+
+            // 先获取鉴权参数
+            const authConfig = await getAuthConfig();
+            appendLog("[INFO] 开始执行h5sdk.config鉴权...", "info");
+            
+            return new Promise((resolve, reject) => {
+                window.h5sdk.config({
+                    appId: state.appId,
+                    timestamp: authConfig.timestamp,
+                    nonceStr: authConfig.nonceStr,
+                    signature: authConfig.signature,
+                    jsApiList: ["tt.requestAuthCode"], // 声明需要调用的JSAPI
+                    onSuccess: (res) => {
+                        appendLog("[OK] h5sdk.config鉴权成功", "ok");
+                        setAuthStatus("鉴权成功", "ok");
+                        state.authSuccess = true;
+                        resolve(res);
+                    },
+                    onFail: (err) => {
+                        const rawErr = err.errMsg || err.message || JSON.stringify(err);
+                        const errorMsg = parseFeishuErrorCode(rawErr);
+                        appendLog(`[ERROR] h5sdk.config鉴权失败：${rawErr}`, "error");
+                        appendLog(`[ERROR] 解读：${errorMsg}`, "error");
+                        setAuthStatus("鉴权失败", "warn");
+                        state.authSuccess = false;
+                        reject(new Error(errorMsg));
+                    }
+                });
+            });
+        }
+
+        async function loadConfig(timeoutMs = 5000) {
+            const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+            const timeoutId = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
+            try {
+                const res = await fetch("/api/feishu/config", controller ? {
+                    signal: controller.signal
+                } : undefined);
+                const data = await res.json();
+                if (!data || !data.success) {
+                    throw new Error((data && data.msg) || "读取飞书配置失败");
+                }
+
+                state.enabled = !!data.enabled;
+                state.sendMessageEnabled = !!data.send_message_enabled;
+                state.appId = data.app_id || "";
+                state.defaultReceiveId = data.default_receive_id || "";
+                state.defaultReceiveIdType = data.default_receive_id_type || "open_id";
+
+                el.envValue.textContent = state.enabled ? "后端已配置飞书应用" : "后端未配置飞书应用";
+                el.envValue.className = `stat-value ${state.enabled ? "ok" : "warn"}`;
+                el.sendValue.textContent = state.sendMessageEnabled ? "已启用" : "未启用";
+                el.sendValue.className = `stat-value ${state.sendMessageEnabled ? "ok" : "warn"}`;
+                el.defaultReceiverValue.textContent = state.defaultReceiveId ? `${state.defaultReceiveIdType}: ${maskValue(state.defaultReceiveId)}` : "未配置";
+
+                if (!el.messageText.value.trim()) {
+                    const now = new Date();
+                    el.messageText.value = `飞书测试消息\n时间: ${now.toLocaleString()}\n来源: 版本差分包工具`;
+                }
+
+                if (state.defaultReceiveId) {
+                    el.receiveId.value = state.defaultReceiveId;
+                    el.receiveIdType.value = state.defaultReceiveIdType || "open_id";
+                    setIdentityStatus(`已载入默认接收人：${state.defaultReceiveIdType} / ${maskValue(state.defaultReceiveId)}`, "ok");
+                } else {
+                    setIdentityStatus("已加载配置，等待你点击获取飞书身份。", "info");
+                }
+
+                // 加载配置后自动尝试鉴权（仅 h5sdk 桥接需要，tt 原生桥接不需要）
+                const bridge = getFeishuBridge();
+                if (bridge && bridge.name === 'tt') {
+                    appendLog("[INFO] 检测到飞书原生桥接(tt)，无需 h5sdk.config 鉴权。", "ok");
+                    setAuthStatus("原生桥接(tt)", "ok");
+                    state.authSuccess = true;
+                } else if (state.enabled && state.appId && bridge?.name === 'h5sdk') {
+                    try {
+                        await doFeishuAuth();
+                    } catch (err) {
+                        appendLog(`[WARN] 自动鉴权失败，可手动点击"重新鉴权"按钮重试：${err.message}`, "warn");
+                    }
+                }
+
+                el.btnFetchIdentity.disabled = false;
+            } catch (error) {
+                const isAbort = error && (error.name === "AbortError" || String(error.message || error).includes("abort"));
+                el.envValue.textContent = "配置加载失败";
+                el.envValue.className = "stat-value warn";
+                el.sendValue.textContent = "未知";
+                el.sendValue.className = "stat-value warn";
+                const message = isAbort ? "读取飞书配置超时，请检查后端是否可用" : (error.message || String(error));
+                setIdentityStatus(message, "error");
+                appendLog(`❌ ${message}`, "error");
+            } finally {
+                if (timeoutId) {
+                    window.clearTimeout(timeoutId);
+                }
+            }
+        }
+
+        async function requestAuthCode(appId) {
+            const bridge = await ensureFeishuSdk();
+            if (!bridge) {
+                throw new Error(`未找到飞书桥接入口。当前状态: ${describeBridgeState()}；页面状态: ${describePageSecurityState()}；${describeSdkCandidates()}；${describeSdkLoadState()}。${explainAccessConstraint()}；如果你确认是在飞书客户端内打开，请重点检查飞书应用的网页访问域名 / JSAPI 安全域名白名单。`);
+            }
+
+            // 只有 h5sdk 桥接需要前置鉴权（window.tt/lark 在飞书容器内天然可用）
+            if (bridge.name === 'h5sdk' && !state.authSuccess) {
+                appendLog("[WARN] h5sdk桥接需要前置鉴权，正在执行...", "warn");
+                await doFeishuAuth();
+            }
+
+            await waitForFeishuReady(bridge.api);
+
+            return new Promise((resolve, reject) => {
+                let settled = false;
+                const finish = (ok, value) => {
+                    if (settled) {
+                        return;
+                    }
+                    settled = true;
+                    if (ok) {
+                        resolve(value);
+                    } else {
+                        reject(value instanceof Error ? value : new Error(String(value)));
+                    }
+                };
+
+                try {
+                    // 调试输出：确认 bridge 和 appId 信息
+                    appendLog(`[DEBUG] bridge.name=${bridge.name}, appId=${appId}`, "info");
+                    appendLog(`[DEBUG] requestAuthCode 参数: ${JSON.stringify({ appId })}`, "info");
+
+                    const maybePromise = bridge.api.requestAuthCode({
+                        appId,
+                        success(result) {
+                            appendLog(`[DEBUG] requestAuthCode 成功: ${JSON.stringify(result)}`, "ok");
+                            finish(true, result);
+                        },
+                        fail(error) {
+                            const errDetail = JSON.stringify(error);
+                            appendLog(`[DEBUG] requestAuthCode 失败原始对象: ${errDetail}`, "error");
+                            const errorMsg = parseFeishuErrorCode(error.errMsg || error.errorMessage || error.message || errDetail || "飞书授权失败");
+                            finish(false, new Error(errorMsg));
+                        },
+                    });
+
+                    if (maybePromise && typeof maybePromise.then === "function") {
+                        maybePromise.then((result) => finish(true, result)).catch((error) => finish(false, error));
+                    }
+                } catch (error) {
+                    finish(false, error);
+                }
+            });
+        }
+
+        async function fetchIdentity() {
+            setSendStatus("身份获取中...", "info");
+            appendLog("[INFO] 正在尝试通过 JSAPI 获取飞书身份...", "info");
+
+            if (!state.appId) {
+                throw new Error("后端未返回 app_id，无法在飞书容器中发起授权");
+            }
+
+            // === 加强调试：打印全部环境信息 ===
+            const pageUrl = window.location.href;
+            const pageOrigin = window.location.origin;
+            const userAgent = window.navigator.userAgent || "";
+            const host = window.location.hostname || "";
+            const protocol = window.location.protocol || "";
+            const isLocalOrInternal = (
+                host === "localhost" ||
+                host === "127.0.0.1" ||
+                /^10\./.test(host) ||
+                /^192\.168\./.test(host) ||
+                /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+            );
+            appendLog(`[DEBUG] 页面完整URL: ${pageUrl}`, "info");
+            appendLog(`[DEBUG] 页面Origin: ${pageOrigin}`, "info");
+            appendLog(`[DEBUG] UserAgent(前120字符): ${userAgent.slice(0, 120)}`, "info");
+            appendLog(`[DEBUG] 飞书appId: ${state.appId}`, "info");
+            appendLog(`[DEBUG] 桥接状态: ${describeBridgeState()}`, "info");
+            appendLog(`[DEBUG] SDK候选列表: ${FEISHU_SDK_URLS.join(" | ") || "无"}`, "info");
+
+            // 检查用户代理是否含飞书关键字
+            const inFeishuClient = /feishu|lark/i.test(userAgent);
+            appendLog(`[DEBUG] 是否在飞书容器内: ${inFeishuClient ? "是" : "否"}`, inFeishuClient ? "ok" : "warn");
+
+            // 检查协议
+            appendLog(`[DEBUG] 页面协议: ${protocol}${protocol === "https:" ? " ✅" : " ❌ 飞书容器需要HTTPS"}`, protocol === "https:" ? "ok" : "warn");
+
+            // 检查是否内网IP
+            appendLog(`[DEBUG] 主机名: ${host}, 内网IP: ${isLocalOrInternal ? "是" : "否"}`, isLocalOrInternal ? "warn" : "ok");
+
+            // 如果是内网 HTTP，提前给出明确引导
+            if (protocol === "http:" && isLocalOrInternal) {
+                appendLog("[WARN] ⚠️ 当前是内网 HTTP 地址，飞书容器不会注入 JSAPI 桥接对象。", "warn");
+                appendLog("[INFO] 💡 建议使用「B. OAuth 网页授权」按钮替代 JSAPI 方式。", "info");
+            }
+
+            // 检查每个桥接候选对象
+            const bridgeCandidates = [
+                ["window.tt", window.tt],
+                ["window.lark", window.lark],
+                ["window.h5sdk", window.h5sdk],
+                ["window.TT", window.TT],
+            ];
+            for (const [name, api] of bridgeCandidates) {
+                const exists = !!api;
+                const type = exists ? typeof api : "N/A";
+                const hasRequestAuthCode = exists && typeof api.requestAuthCode === "function";
+                const hasNested = exists && api.tt && typeof api.tt.requestAuthCode === "function";
+                appendLog(`[DEBUG]   桥接候选 ${name}: 存在=${exists}, 类型=${type}, requestAuthCode=${hasRequestAuthCode || hasNested ? "可用 ✅" : "不可用"}`, hasRequestAuthCode || hasNested ? "ok" : "warn");
+            }
+            // === 加强调试结束 ===
+
+            const bridge = await ensureFeishuSdk();
+            if (!bridge) {
+                const protocol = window.location.protocol || "";
+                const host = window.location.hostname || "";
+                const isHttpInternal = (
+                    protocol === "http:" && (
+                        /^10\./.test(host) ||
+                        /^192\.168\./.test(host) ||
+                        /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+                    )
+                );
+                const tip = isHttpInternal
+                    ? "内网 HTTP 环境下飞书不会注入 JSAPI。请改用「B. OAuth 网页授权」获取身份。"
+                    : "请检查飞书应用后台的网页访问域名 / JSAPI 安全域名白名单，或改用「B. OAuth 网页授权」。";
+                throw new Error(
+                    `飞书桥接入口未就绪。\n${tip}\n\n` +
+                    `当前状态: ${describeBridgeState()}\n` +
+                    `页面状态: ${describePageSecurityState()}\n` +
+                    `${describeSdkCandidates()}\n` +
+                    `${describeSdkLoadState()}\n` +
+                    `${explainAccessConstraint()}`
+                );
+            }
+
+            appendLog(`[DEBUG] 最终使用的桥接对象: ${bridge.name}`, "ok");
+
+            await waitForFeishuReady(bridge.api);
+
+            const authResult = await requestAuthCode(state.appId);
+            const code = authResult && (authResult.code || authResult.auth_code || authResult.tempCode || authResult.data && authResult.data.code);
+            if (!code) {
+                throw new Error("飞书授权成功，但没有拿到 code");
+            }
+
+            appendLog("[INFO] 已获取授权码，正在换取用户身份...");
+            const res = await fetch("/api/feishu/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    code
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.msg || "换取飞书身份失败");
+            }
+
+            fillIdentity(data);
+            setIdentityStatus(
+                `身份获取成功\nreceive_id_type: ${data.receive_id_type || "open_id"}\nreceive_id: ${maskValue(data.receive_id)}\nopen_id: ${maskValue(data.open_id)}\nuser_id: ${maskValue(data.user_id)}`,
+                "ok",
+            );
+            setSendStatus("身份已就绪，可以发送测试消息。", "ok");
+            appendLog(`[OK] 获取身份成功：${data.receive_id_type || "open_id"} / ${data.receive_id}`, "ok");
+        }
+
+        async function startOAuthFlow() {
+            setSendStatus("正在生成 OAuth 授权链接...", "info");
+            appendLog("[INFO] 准备跳转飞书 OAuth 网页授权...", "info");
+
+            try {
+                // 获取 OAuth 授权 URL
+                const currentUrl = window.location.href.split('?')[0].split('#')[0];
+                const res = await fetch(`/api/feishu/oauth-url?redirect_uri=${encodeURIComponent(currentUrl)}`);
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.msg || "获取 OAuth 授权链接失败");
+                }
+
+                const authUrl = data.data.auth_url;
+                appendLog(`[INFO] OAuth 授权链接已生成，即将跳转...`, "info");
+                appendLog(`[DEBUG] redirect_uri: ${data.data.redirect_uri}`, "info");
+                appendLog(`[INFO] 正在跳转到飞书授权页...`, "info");
+
+                // 直接跳转到飞书授权页
+                window.location.href = authUrl;
+            } catch (error) {
+                setIdentityStatus(`OAuth 流程启动失败: ${error.message}`, "error");
+                appendLog(`❌ OAuth 流程失败: ${error.message}`, "error");
+            }
+        }
+
+        async function handleOAuthCallback() {
+            // 检查 URL 中是否有飞书 OAuth 回调的 code 参数
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            if (!code) {
+                return false; // 没有 code，无需处理
+            }
+
+            appendLog("[INFO] 检测到 OAuth 回调 code，正在换取用户身份...", "info");
+            setIdentityStatus("正在通过 OAuth code 换取身份...", "info");
+
+            try {
+                const res = await fetch("/api/feishu/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.msg || "OAuth code 换取身份失败");
+                }
+
+                fillIdentity(data);
+                setIdentityStatus(
+                    `✅ OAuth 身份获取成功\nreceive_id_type: ${data.receive_id_type || "open_id"}\nreceive_id: ${maskValue(data.receive_id)}`,
+                    "ok",
+                );
+                setSendStatus("身份已就绪（OAuth），可以发送测试消息。", "ok");
+                appendLog(`[OK] OAuth 换取身份成功：${data.receive_id_type || "open_id"} / ${data.receive_id}`, "ok");
+
+                // 清理 URL 中的 code 参数，避免重复处理
+                if (window.history && window.history.replaceState) {
+                    const cleanUrl = window.location.href.split('?')[0];
+                    window.history.replaceState({}, document.title, cleanUrl);
+                }
+
+                return true;
+            } catch (error) {
+                setIdentityStatus(`OAuth 身份换取失败: ${error.message}`, "error");
+                appendLog(`❌ OAuth 身份换取失败: ${error.message}`, "error");
+                return false;
+            }
+        }
+
+        async function sendTestMessage() {
+            const receiveId = el.receiveId.value.trim();
+            const receiveIdType = el.receiveIdType.value || "open_id";
+            const message = el.messageText.value.trim();
+
+            if (!receiveId) {
+                throw new Error("请先获取飞书身份，或者手动填写接收人标识");
+            }
+            if (!message) {
+                throw new Error("请输入测试消息内容");
+            }
+
+            setSendStatus("正在发送测试消息...", "info");
+            appendLog(`[INFO] 发送目标: ${receiveIdType} / ${maskValue(receiveId)}`);
+
+            const res = await fetch("/api/feishu/test", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    receive_id: receiveId,
+                    receive_id_type: receiveIdType,
+                    message,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.msg || "发送测试消息失败");
+            }
+
+            setSendStatus(`发送成功：${data.receive_id_type} / ${maskValue(data.receive_id)}`, "ok");
+            appendLog(`[OK] ${data.msg || "测试消息发送成功"}`, "ok");
+            appendLog(`[OK] 接收人: ${data.receive_id_type} / ${data.receive_id}`, "ok");
+        }
+
+        el.btnFetchIdentity.addEventListener("click", async() => {
+            try {
+                el.btnFetchIdentity.disabled = true;
+                await fetchIdentity();
+            } catch (error) {
+                const errText = error.message || String(error);
+                setIdentityStatus(errText, "error");
+                setSendStatus("身份获取失败。", "error");
+                appendLog(`❌ ${errText}`, "error");
+                // 如果是 URL 白名单问题，给出明确引导
+                if (errText.includes("2602002") || errText.includes("10236") || errText.includes("invalid url")) {
+                    appendLog("[INFO] 💡 此错误表示当前页面 URL 未加入飞书应用后台的「网页应用」白名单。", "info");
+                    appendLog("[INFO] 💡 请到飞书开放平台 → 应用 → 安全设置 → 添加当前 URL 到「网页应用」。", "info");
+                    appendLog("[INFO] 💡 或者尝试「B. OAuth 网页授权」作为备选方案（不依赖 JSAPI）。", "info");
+                }
+                if (errText.includes("未找到飞书桥接入口") || errText.includes("未就绪")) {
+                    appendLog("[INFO] 💡 请尝试「B. OAuth 网页授权」按钮，它不依赖 JSAPI 桥接对象。", "info");
+                }
+            } finally {
+                el.btnFetchIdentity.disabled = false;
+            }
+        });
+
+        el.btnOAuthAuthorize.addEventListener("click", async() => {
+            try {
+                el.btnOAuthAuthorize.disabled = true;
+                await startOAuthFlow();
+            } catch (error) {
+                setIdentityStatus(error.message || String(error), "error");
+                appendLog(`❌ ${error.message || error}`, "error");
+            } finally {
+                el.btnOAuthAuthorize.disabled = false;
+            }
+        });
+
+        el.btnLoadDefault.addEventListener("click", () => {
+            if (state.defaultReceiveId) {
+                fillIdentity({
+                    receive_id: state.defaultReceiveId,
+                    receive_id_type: state.defaultReceiveIdType,
+                });
+                setIdentityStatus(`已加载默认接收人：${state.defaultReceiveIdType} / ${maskValue(state.defaultReceiveId)}`, "ok");
+                appendLog(`[INFO] 已载入默认接收人：${state.defaultReceiveIdType} / ${state.defaultReceiveId}`);
+            } else {
+                setIdentityStatus("当前没有配置默认接收人，请先获取飞书身份。", "warn");
+                appendLog("[WARN] 当前没有配置默认接收人。", "warn");
+            }
+        });
+
+        // 新增：重新鉴权按钮事件（仅对 h5sdk 桥接有意义）
+        el.btnCheckAuth.addEventListener("click", async() => {
+            try {
+                el.btnCheckAuth.disabled = true;
+                const bridge = getFeishuBridge();
+                if (bridge && bridge.name === 'tt') {
+                    appendLog("[INFO] 当前使用飞书原生桥接(tt)，无需 h5sdk.config 鉴权。", "ok");
+                    setAuthStatus("原生桥接(tt)，无需鉴权", "ok");
+                    state.authSuccess = true;
+                    setIdentityStatus("使用 tt 原生桥接，无需额外鉴权。可直接点击「JSAPI获取身份」。", "ok");
+                    return;
+                }
+                await doFeishuAuth();
+                setIdentityStatus("鉴权成功，可尝试获取飞书身份", "ok");
+            } catch (error) {
+                setIdentityStatus(`鉴权失败：${error.message}`, "error");
+                appendLog(`[INFO] 💡 h5sdk鉴权失败通常意味着需要通过 OAuth 方式获取身份。`, "info");
+            } finally {
+                el.btnCheckAuth.disabled = false;
+            }
+        });
+
+        el.btnSendTest.addEventListener("click", async() => {
+            try {
+                el.btnSendTest.disabled = true;
+                await sendTestMessage();
+            } catch (error) {
+                setSendStatus(error.message || String(error), "error");
+                appendLog(`❌ ${error.message || error}`, "error");
+            } finally {
+                el.btnSendTest.disabled = false;
+            }
+        });
+
+        el.btnResetLog.addEventListener("click", () => {
+            el.logBox.innerHTML = "";
+            setSendStatus("日志已清空。", "info");
+        });
+
+        el.receiveId.addEventListener("input", () => {
+            if (el.receiveId.value.trim()) {
+                setIdentityStatus(`已填写接收人：${el.receiveIdType.value} / ${maskValue(el.receiveId.value.trim())}`, "info");
+            }
+        });
+
+        window.addEventListener("load", async() => {
+            updateDomainCheck();
+
+            // 优先检查是否有 OAuth 回调 code
+            const oauthHandled = await handleOAuthCallback();
+            if (oauthHandled) {
+                // OAuth 已处理完身份，继续加载配置
+                await loadConfig();
+                updateDomainCheck();
+                appendLog("[INFO] OAuth 身份已就绪，可发送测试消息。", "ok");
+                return;
+            }
+
+            await loadConfig();
+            updateDomainCheck();
+            if (!el.messageText.value.trim()) {
+                const now = new Date();
+                el.messageText.value = `飞书测试消息\n时间: ${now.toLocaleString()}\n来源: 版本差分包工具`;
+            }
+            appendLog(`[INFO] 页面状态: ${describePageSecurityState()}`, "info");
+            appendLog(`[INFO] 访问约束: ${explainAccessConstraint()}`, "info");
+
+            const bridge = getFeishuBridge();
+            if (bridge) {
+                appendLog(`[OK] 已检测到飞书桥接对象: ${bridge.name}`, "ok");
+                setIdentityStatus("已检测到飞书桥接对象，点击「JSAPI 获取身份」可自动获取。", "ok");
+            } else {
+                const host = window.location.hostname || "";
+                const protocol = window.location.protocol || "";
+                const isLocalOrInternal = (
+                    host === "localhost" ||
+                    host === "127.0.0.1" ||
+                    /^10\./.test(host) ||
+                    /^192\.168\./.test(host) ||
+                    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+                );
+                if (protocol === "http:" && isLocalOrInternal) {
+                    appendLog("[WARN] 当前是内网 HTTP 地址，飞书容器不会注入 JSAPI 桥接对象。", "warn");
+                    appendLog("[INFO] 请使用「B. OAuth 网页授权」按钮获取身份（推荐内网场景使用）。", "info");
+                    setIdentityStatus("内网 HTTP 环境 → 请点击「B. OAuth 网页授权」获取身份", "warn");
+                } else if (protocol === "http:") {
+                    appendLog("[WARN] 当前是 HTTP 地址，飞书容器可能限制 JSAPI。建议使用 OAuth 网页授权。", "warn");
+                    setIdentityStatus("HTTP 环境 → 建议使用「B. OAuth 网页授权」获取身份", "warn");
+                } else {
+                    appendLog("[WARN] 未检测到飞书桥接对象。请检查飞书应用后台的 JSAPI 安全域名白名单。", "warn");
+                    appendLog("[INFO] 也可尝试「B. OAuth 网页授权」作为备选方案。", "info");
+                    setIdentityStatus("未检测到桥接对象 → 尝试 JSAPI 获取 或 使用 OAuth 网页授权", "warn");
+                }
+            }
+            appendLog("[INFO] 页面已就绪。", "ok");
+        });
+    </script>
+</body>
+
+</html>

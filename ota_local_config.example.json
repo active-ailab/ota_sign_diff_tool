@@ -1,0 +1,15 @@
+{
+    "pem": "./sign.pem",
+    "nas_address": "10.2.100.85:5001",
+    "nas_username": "你的NAS账号",
+    "nas_password": "你的NAS密码",
+    "nas_verify_tls": false,
+    "cleanup_keep_count": 10,
+    "task_keep_count": 100,
+    "task_log_max_lines": 2000,
+    "task_log_max_line_chars": 2000,
+    "feishu_app_id": "cli_你的飞书AppID",
+    "feishu_app_secret": "你的飞书AppSecret",
+    "feishu_default_receive_id": "ou_你的接收人open_id",
+    "feishu_default_receive_id_type": "open_id"
+}

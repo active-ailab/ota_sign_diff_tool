@@ -1,0 +1,48 @@
+.feishu_tenant_access_token.json
+
+# Any other local Feishu token cache artifacts
+.feishu_*token*.json
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Runtime-generated workspace artifacts
+work/
+output/
+upload/
+
+# Local config files that may contain credentials (keep *.example.json)
+release_pipeline_config*.json
+!release_pipeline_config.example.json
+nas_upload_config.json
+nas_upload_config.json.tmp
+
+# OTA 签名工具本地敏感配置（私发，切勿提交真实凭据）
+ota_local_config.json
+sign.pem
+downloads
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Backup files (often contain real credentials)
+*.bak.*
+
+# Mermaid CLI outputs
+diagrams/out/

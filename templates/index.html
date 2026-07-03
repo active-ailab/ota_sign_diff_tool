@@ -1,0 +1,1577 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>版本差分包生成工具</title>
+    <style>
+      :root {
+        --primary-color: #4a90e2;
+        --bg-color: #f5f7fa;
+        --card-bg: #ffffff;
+        --text-color: #333333;
+        --border-color: #e1e4e8;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 16px;
+        box-sizing: border-box;
+      }
+
+      .container {
+        background-color: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 560px;
+        box-sizing: border-box;
+      }
+
+      h1 {
+        text-align: center;
+        color: var(--primary-color);
+        margin: 0 0 1rem;
+        font-size: 1.4rem;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .tab-btn {
+        flex: 1;
+        border: 1px solid var(--border-color);
+        background: #f0f4fb;
+        color: var(--text-color);
+        border-radius: 6px;
+        padding: 0.6rem 0.8rem;
+        cursor: pointer;
+        font-size: 0.95rem;
+      }
+
+      .tab-btn.active {
+        background: var(--primary-color);
+        color: #fff;
+        border-color: var(--primary-color);
+      }
+
+      .panel {
+        display: none;
+      }
+
+      .panel.active {
+        display: block;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.4rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      input[type="text"],
+      input[type="file"],
+      select {
+        width: 100%;
+        padding: 0.72rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 0.98rem;
+        box-sizing: border-box;
+      }
+
+      input[type="text"]:focus,
+      input[type="file"]:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+      }
+
+      .btn-submit {
+        width: 100%;
+        padding: 0.85rem;
+        background-color: var(--primary-color);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        margin-top: 0.5rem;
+      }
+
+      .btn-submit:disabled {
+        background-color: #c8ced8;
+        cursor: not-allowed;
+        opacity: 0.8;
+      }
+
+      .page-actions {
+        display: flex;
+        justify-content: center;
+        margin: 0 0 1rem;
+      }
+
+      .btn-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.6rem 1rem;
+        border-radius: 999px;
+        border: 1px solid #9bb8e8;
+        background: #eef5ff;
+        color: #2457a7;
+        text-decoration: none;
+        font-size: 0.92rem;
+        font-weight: 700;
+      }
+
+      .btn-link:hover {
+        background: #dfeaff;
+      }
+
+      .progress-container {
+        margin-top: 1rem;
+        padding: 0.9rem;
+        background-color: #fff;
+        border: 1px solid #d0deff;
+        border-radius: 6px;
+        display: none;
+      }
+
+      .progress-container.show {
+        display: block;
+      }
+
+      .status-line {
+        margin-top: 0.7rem;
+        padding: 0.55rem 0.65rem;
+        border-radius: 4px;
+        background: #f7f9fe;
+        border: 1px solid #d9e4ff;
+        color: #2f4f8f;
+        font-size: 0.86rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.6rem;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #3c6fc6;
+      }
+
+      .progress-bar-bg {
+        width: 100%;
+        height: 28px;
+        background-color: #eff4ff;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid #d0deff;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #4a90e2 0%, #357abd 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 0.82rem;
+        font-weight: 700;
+        transition: width 0.3s ease;
+      }
+
+      .log-area {
+        margin-top: 0.6rem;
+        max-height: 200px;
+        overflow-y: auto;
+        background: #1a1e2e;
+        border-radius: 4px;
+        padding: 0.5rem 0.7rem;
+        font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+        font-size: 0.78rem;
+        line-height: 1.55;
+        color: #cdd6f4;
+      }
+      .log-area .log-line {
+        display: block;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .log-area .log-error {
+        color: #f38ba8;
+      }
+      .log-area .log-ok {
+        color: #a6e3a1;
+      }
+      .log-area .log-info {
+        color: #89dceb;
+      }
+      .log-area .log-progress {
+        color: #f9e2af;
+      }
+      .log-area .log-key {
+        color: #f5c56b;
+        background: rgba(245, 197, 107, 0.12);
+        border-left: 2px solid #f5c56b;
+        padding-left: 0.4rem;
+        margin: 0.08rem 0;
+      }
+
+      .file-picker-row {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+      }
+      .file-picker-row input[type="file"] {
+        flex: 1;
+        width: auto;
+      }
+      .file-version-tag {
+        flex: 0 0 auto;
+        min-width: 110px;
+        text-align: center;
+        padding: 0.38rem 0.52rem;
+        border-radius: 4px;
+        border: 1px solid #d0deff;
+        background: #f4f7ff;
+        color: #2f4f8f;
+        font-size: 0.78rem;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+
+      .feishu-user-info {
+        text-align: center;
+        padding: 0.5rem;
+        font-size: 0.85rem;
+        color: #666;
+      }
+
+      .helper-text {
+        margin-top: 0.35rem;
+        font-size: 0.78rem;
+        color: #6f7a8a;
+      }
+
+      .helper-text.warn {
+        color: #b26a00;
+      }
+
+      .feishu-debug-panel {
+        margin-top: 1rem;
+        padding: 0.9rem;
+        border: 1px solid #d9e4ff;
+        border-radius: 6px;
+        background: #f9fbff;
+      }
+
+      .feishu-debug-title {
+        margin: 0 0 0.5rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #2f4f8f;
+      }
+
+      .feishu-debug-status {
+        margin: 0 0 0.5rem;
+        font-size: 0.86rem;
+        color: #4f5f77;
+        white-space: pre-wrap;
+      }
+
+      .feishu-debug-log {
+        padding: 0.7rem;
+        border-radius: 4px;
+        background: #101826;
+        color: #d9e8ff;
+        font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+        font-size: 0.8rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-height: 96px;
+        max-height: 220px;
+        overflow-y: auto;
+      }
+
+      .result-link-box {
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 2px solid #4a90e2;
+        border-radius: 6px;
+        background: #f0f7ff;
+        display: none;
+      }
+
+      .result-link-box.show {
+        display: block;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .result-link-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #2f4f8f;
+        margin-bottom: 0.6rem;
+      }
+
+      .result-link-item {
+        margin-bottom: 0.6rem;
+        padding: 0.7rem;
+        background: #ffffff;
+        border: 1px solid #d0deff;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.45rem;
+      }
+
+      .result-link-top,
+      .result-link-bottom {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+      }
+
+      .result-link-bottom {
+        align-items: stretch;
+      }
+
+      .result-link-label {
+        font-size: 0.8rem;
+        color: #6f7a8a;
+        font-weight: 600;
+        min-width: 80px;
+        flex: 0 0 auto;
+      }
+
+      .result-link-value {
+        flex: 1;
+        font-size: 0.82rem;
+        color: #2f4f8f;
+        word-break: break-all;
+        font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+        overflow-x: auto;
+      }
+
+      .result-link-input {
+        flex: 1;
+        min-width: 0;
+        padding: 0.42rem 0.55rem;
+        border: 1px solid #d0deff;
+        border-radius: 4px;
+        background: #f7fbff;
+        color: #2f4f8f;
+        font-size: 0.82rem;
+        font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+      }
+
+      .result-link-input:focus {
+        outline: none;
+        border-color: #4a90e2;
+        box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.15);
+      }
+
+      .result-link-btn {
+        flex: 0 0 auto;
+        padding: 0.4rem 0.8rem;
+        background: #4a90e2;
+        color: #fff;
+        border: none;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .result-link-btn:hover {
+        background: #357abd;
+      }
+
+      .result-link-btn.copied {
+        background: #28a745;
+      }
+      .page-footer {
+        margin-top: 1.35rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e6ecf5;
+      }
+
+      .footer-card {
+        position: relative;
+        padding: 1rem;
+        border: 1px solid #cddcff;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 55%, #f9fbff 100%);
+        box-shadow: 0 10px 24px rgba(53, 122, 189, 0.08);
+        overflow: hidden;
+      }
+
+      .footer-card::before {
+        content: "";
+        position: absolute;
+        top: -32px;
+        right: -18px;
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(74, 144, 226, 0.2) 0%, rgba(74, 144, 226, 0) 72%);
+        pointer-events: none;
+      }
+
+      .footer-kicker {
+        display: inline-flex;
+        align-items: center;
+        margin-bottom: 0.55rem;
+        padding: 0.25rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(36, 87, 167, 0.1);
+        color: #2457a7;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .footer-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1f3f75;
+      }
+
+      .footer-note {
+        margin: 0.45rem 0 0.85rem;
+        font-size: 0.82rem;
+        line-height: 1.6;
+        color: #5f6f86;
+      }
+
+      .footer-accordion {
+        border: 1px solid #cfe0ff;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.92);
+        overflow: hidden;
+      }
+
+      .footer-accordion summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+        padding: 0.9rem 1rem;
+        cursor: pointer;
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: #2457a7;
+        list-style: none;
+      }
+
+      .footer-accordion summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .footer-accordion summary::after {
+        content: "展开";
+        flex: 0 0 auto;
+        padding: 0.18rem 0.5rem;
+        border-radius: 999px;
+        background: #eef4ff;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #5a6f94;
+      }
+
+      .footer-accordion[open] summary::after {
+        content: "收起";
+      }
+
+      .footer-accordion-body {
+        padding: 0 1rem 1rem;
+        border-top: 1px solid #edf2ff;
+      }
+
+      .footer-list {
+        margin: 0.8rem 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.55rem;
+      }
+
+      .footer-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.55rem 0.65rem;
+        border-radius: 8px;
+        background: #f7faff;
+        font-size: 0.84rem;
+        line-height: 1.65;
+        color: #4f5f77;
+      }
+
+      .footer-label {
+        flex: 0 0 72px;
+        font-weight: 700;
+        color: #2f4f8f;
+      }
+
+      .footer-value {
+        flex: 1;
+        min-width: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <h1>版本差分包生成工具</h1>
+
+      <div class="page-actions" id="feishuIdentityBar">
+        <span id="feishuIdentityText" style="color:#888;font-size:0.85rem;margin-right:0.5rem;">🔒 未获取飞书身份（通知将发给默认接收人）</span>
+        <button type="button" class="btn-link" id="btnGetFeishuId" style="font-size:0.82rem;padding:0.35rem 0.7rem;border-radius:6px;">
+          获取飞书身份
+        </button>
+        <a class="btn-link" href="/feishu-test" style="font-size:0.75rem;padding:0.3rem 0.6rem;margin-left:0.4rem;background:#f0f0f0;border-color:#ccc;color:#666;">
+          测试页
+        </a>
+        <a class="btn-link" href="/stats" style="font-size:0.82rem;padding:0.35rem 0.7rem;margin-left:0.4rem;border-radius:6px;">
+          统计
+        </a>
+      </div>
+
+      <div class="tabs">
+        <button type="button" class="tab-btn active" id="tabNasLink">
+          NAS 链接差分
+        </button>
+        <button type="button" class="tab-btn" id="tabLocalUpload">
+          本地文件差分
+        </button>
+        <button type="button" class="tab-btn" id="tabVersion">
+          版本号差分
+        </button>
+      </div>
+
+      <form id="versionForm" action="javascript:void(0)" method="post" novalidate>
+        <input type="hidden" id="mode" name="mode" value="nas_link" />
+
+        <div class="panel active" id="panelNasLink">
+          <div class="form-group">
+            <label for="oldNasUrl">
+              旧版本NAS链接（OTA包、CLOUD包、总包）
+            </label>
+            <input
+              type="text"
+              id="oldNasUrl"
+              name="oldNasUrl"
+              placeholder="粘贴NAS分享页链接，如 https://10.2.100.85:5001/sharing/Rqhby2i3X"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="newNasUrl">
+              新版本NAS链接（OTA包、CLOUD包、总包）
+            </label>
+            <input
+              type="text"
+              id="newNasUrl"
+              name="newNasUrl"
+              placeholder="粘贴NAS分享页链接，如 https://10.2.100.85:5001/sharing/Rqhby2i3X"
+            />
+          </div>
+
+          <div class="progress-container" id="progressContainerNasLink">
+            <div class="progress-label">
+              <span>执行进度</span>
+              <span id="progressTextNasLink">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progressBarNasLink"></div>
+            </div>
+            <div class="log-area" id="logAreaNasLink"></div>
+            <div class="result-link-box" id="resultLinkBoxNasLink">
+              <div class="result-link-title">✅ 生成成功 - NAS 文件</div>
+              <div id="resultLinksNasLink"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="panelVersion">
+          <div class="form-group">
+            <label for="projectName">
+              项目名称（例如：pike、milan_32、milan_64，注意区分32和64）
+            </label>
+            <input
+              type="text"
+              id="projectName"
+              name="projectName"
+              placeholder="请输入项目名称"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="baseVersion">基础版本号（例如：1.2.0.1）</label>
+            <input
+              type="text"
+              id="baseVersion"
+              name="baseVersion"
+              placeholder="请输入基础版本号"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="targetVersion">目标版本号（例如：1.3.0.1）</label>
+            <input
+              type="text"
+              id="targetVersion"
+              name="targetVersion"
+              placeholder="请输入目标版本号"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="releaseType">差分类型</label>
+            <select id="releaseType" name="releaseType">
+              <option value="" selected>请选择</option>
+              <option value="release">Release</option>
+              <option value="monkey">Monkey</option>
+            </select>
+          </div>
+
+          <div class="progress-container" id="progressContainerVersion">
+            <div class="progress-label">
+              <span>执行进度</span>
+              <span id="progressTextVersion">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progressBarVersion"></div>
+            </div>
+            <div class="log-area" id="logAreaVersion"></div>
+            <div class="result-link-box" id="resultLinkBoxVersion">
+              <div class="result-link-title">✅ 生成成功 - NAS 文件</div>
+              <div id="resultLinksVersion"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="panelLocalUpload">
+          <div class="form-group">
+            <label for="oldLocalFile">
+              旧版本文件（watch@分区名ota_sign.zip 或总包）
+            </label>
+            <div class="file-picker-row">
+              <input
+                type="file"
+                id="oldLocalFile"
+                name="oldLocalFile"
+                accept=".zip,.tgz,.tar,.gz,.zab"
+              />
+              <span class="file-version-tag" id="oldLocalVersionTag">
+                版本: 未解析
+              </span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="newLocalFile">
+              新版本文件（watch@分区名ota_sign.zip 或总包）
+            </label>
+            <div class="file-picker-row">
+              <input
+                type="file"
+                id="newLocalFile"
+                name="newLocalFile"
+                accept=".zip,.tgz,.tar,.gz,.zab"
+              />
+              <span class="file-version-tag" id="newLocalVersionTag">
+                版本: 未解析
+              </span>
+            </div>
+          </div>
+
+          <div class="progress-container" id="progressContainerLocalUpload">
+            <div class="progress-label">
+              <span>执行进度</span>
+              <span id="progressTextLocalUpload">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progressBarLocalUpload"></div>
+            </div>
+            <div class="log-area" id="logAreaLocalUpload"></div>
+            <div class="result-link-box" id="resultLinkBoxLocalUpload">
+              <div class="result-link-title">✅ 生成成功 - NAS 文件</div>
+              <div id="resultLinksLocalUpload"></div>
+            </div>
+          </div>
+        </div>
+
+        <section class="feishu-debug-panel" style="display: none;">
+          <h2 class="feishu-debug-title">飞书调试日志</h2>
+          <div class="feishu-debug-status" id="feishuDebugStatus">等待初始化...</div>
+          <div class="feishu-debug-log" id="feishuDebugLog"></div>
+        </section>
+
+        <div id="logs"></div>
+        <button type="button" class="btn-submit" id="submitBtn">
+          开始生成
+        </button>
+      </form>
+      <footer class="page-footer">
+        <section class="footer-card"> 
+          <!-- <h2 class="footer-title">功能说明与责任声明</h2>
+          <p class="footer-note">
+            本工具用于 NAS 固件包差异处理，使用前请确认上传链接、访问权限与版本信息准确无误。
+          </p> -->
+          <details class="footer-accordion">
+            <summary>关于工具与维护</summary>
+            <div class="footer-accordion-body">
+              <ul class="footer-list">
+                <li>
+                  <span class="footer-label">工具用途</span>
+                  <span class="footer-value">本工具用于 NAS 固件包差异处理，使用前请确认上传链接、访问权限与版本信息准确无误</span>
+                </li>
+                <li>
+                  <span class="footer-label">部门</span>
+                  <span class="footer-value">青春手表事业部 - 软件部 - 应用开发组</span>
+                </li>
+                <li>
+                  <span class="footer-label">维护人</span>
+                  <span class="footer-value">郭启发</span>
+                </li>
+                <li>
+                  <span class="footer-label">备注</span>
+                  <span class="footer-value">如遇问题 / 优化建议及时反馈</span>
+                </li>
+              </ul>
+            </div>
+          </details>
+        </section>
+      </footer>
+    </main>
+    <script>
+      // ========== 飞书用户身份（localStorage 持久化 + OAuth + JSAPI） ==========
+      const FEISHU_ID_STORAGE_KEY = 'feishu_user_identity_v1';
+      let feishuUserIdentity = null;  // { open_id, receive_id, receive_id_type }
+
+      function loadSavedIdentity() {
+        try {
+          const raw = localStorage.getItem(FEISHU_ID_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.open_id) {
+              feishuUserIdentity = parsed;
+              return true;
+            }
+          }
+        } catch (_) {}
+        return false;
+      }
+
+      function saveIdentity(identity) {
+        feishuUserIdentity = identity;
+        try {
+          localStorage.setItem(FEISHU_ID_STORAGE_KEY, JSON.stringify(identity));
+        } catch (_) {}
+        updateIdentityUI();
+      }
+
+      function clearIdentity() {
+        feishuUserIdentity = null;
+        try { localStorage.removeItem(FEISHU_ID_STORAGE_KEY); } catch (_) {}
+        updateIdentityUI();
+      }
+
+      function updateIdentityUI() {
+        const textEl = document.getElementById('feishuIdentityText');
+        const bar = document.getElementById('feishuIdentityBar');
+        if (!textEl || !bar) return;
+        if (feishuUserIdentity && feishuUserIdentity.open_id) {
+          const id = feishuUserIdentity.open_id;
+          const short = id.length > 8 ? id.slice(0,5)+'...'+id.slice(-4) : id;
+          textEl.innerHTML = `✅ 飞书身份已获取\uff08${short}\uff09 — 完成后将发送通知到你的飞书`;
+          textEl.style.color = '#2e7d32';
+          bar.style.background = '#e8f5e9';
+          bar.style.borderRadius = '8px';
+          bar.style.padding = '0.5rem 0.8rem';
+        } else {
+          textEl.innerHTML = '🔒 未获取飞书身份（通知将发给默认接收人）';
+          textEl.style.color = '#888';
+          bar.style.background = '';
+          bar.style.borderRadius = '';
+          bar.style.padding = '';
+        }
+      }
+
+      function getFeishuBridge() {
+        for (const api of [window.tt, window.lark, window.h5sdk, window.TT]) {
+          if (api && typeof api.requestAuthCode === 'function') return { name: 'tt', api };
+        }
+        return null;
+      }
+
+      // 方式A：JSAPI 静默检测（飞书容器内可能可用）
+      async function detectFeishuViaJsapi() {
+        if (!/feishu|lark/i.test(navigator.userAgent || '')) return false;
+        let appId = '';
+        try {
+          const cfgRes = await fetch('/api/feishu/config');
+          const cfg = await cfgRes.json();
+          if (cfg.success && cfg.app_id) appId = cfg.app_id;
+        } catch (_) { return false; }
+        if (!appId) return false;
+
+        const bridge = getFeishuBridge();
+        if (!bridge) return false;
+
+        try {
+          const authResult = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('timeout')), 8000);
+            try {
+              const maybePromise = bridge.api.requestAuthCode({
+                appId,
+                success(r) { clearTimeout(timeout); resolve(r); },
+                fail(e) { clearTimeout(timeout); reject(e); },
+              });
+              if (maybePromise && typeof maybePromise.then === 'function') {
+                maybePromise.then(r => { clearTimeout(timeout); resolve(r); })
+                           .catch(e => { clearTimeout(timeout); reject(e); });
+              }
+            } catch (e) { clearTimeout(timeout); reject(e); }
+          });
+          const code = authResult?.code || authResult?.auth_code;
+          if (!code) return false;
+          const loginRes = await fetch('/api/feishu/login', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+          });
+          const loginData = await loginRes.json();
+          if (loginData.success && loginData.open_id) {
+            saveIdentity({
+              open_id: loginData.open_id,
+              receive_id: loginData.receive_id || loginData.open_id,
+              receive_id_type: loginData.receive_id_type || 'open_id',
+            });
+            return true;
+          }
+        } catch (_) {}
+        return false;
+      }
+
+      // 方式B：OAuth 网页授权（内网 HTTP 也可用，已验证可行）
+      async function startOAuthFlow() {
+        const btn = document.getElementById('btnGetFeishuId');
+        if (btn) { btn.disabled = true; btn.innerText = '跳转中...'; }
+        try {
+          const currentUrl = window.location.href.split('?')[0].split('#')[0];
+          const res = await fetch(`/api/feishu/oauth-url?redirect_uri=${encodeURIComponent(currentUrl)}`);
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            alert('获取授权链接失败: ' + (data.msg || '未知错误'));
+            return;
+          }
+          window.location.href = data.data.auth_url;
+        } catch (e) {
+          alert('OAuth 启动失败: ' + (e.message || e));
+        } finally {
+          if (btn) { btn.disabled = false; btn.innerText = '获取飞书身份'; }
+        }
+      }
+
+      // OAuth 回调处理（URL 带 ?code=xxx）
+      async function handleOAuthCallback() {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        if (!code) return false;
+
+        try {
+          const loginRes = await fetch('/api/feishu/login', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+          });
+          const loginData = await loginRes.json();
+          if (!loginData.success || !loginData.open_id) {
+            alert('飞书身份换取失败: ' + (loginData.msg || '未知错误'));
+            return false;
+          }
+          saveIdentity({
+            open_id: loginData.open_id,
+            receive_id: loginData.receive_id || loginData.open_id,
+            receive_id_type: loginData.receive_id_type || 'open_id',
+          });
+          // 清理 URL 中的 code
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, document.title, window.location.href.split('?')[0]);
+          }
+          return true;
+        } catch (e) {
+          alert('OAuth 身份换取异常: ' + (e.message || e));
+          return false;
+        }
+      }
+
+      // ========== 页面主体逻辑 ==========
+      const logs = document.getElementById("logs");
+      
+      // 页面加载时初始化
+      window.onload = async function () {
+        try {
+          logs.innerHTML = "<p style='color:#333'>✅ 页面已加载</p><p style='color:#666'>提交任务后，结果链接会直接显示在页面中</p>";
+
+          // 1. 优先恢复 localStorage 中的身份（跨页面持久化）
+          if (loadSavedIdentity()) {
+            console.log('[Feishu] 已从本地恢复飞书身份');
+          }
+
+          // 2. 处理 OAuth 回调（URL 带 ?code=xxx）
+          const oauthDone = await handleOAuthCallback();
+          if (oauthDone) {
+            console.log('[Feishu] OAuth 身份获取成功');
+          }
+
+          // 3. 如果还没身份，静默尝试 JSAPI（飞书容器内可能可用）
+          if (!feishuUserIdentity) {
+            await detectFeishuViaJsapi();
+          }
+
+          // 4. 更新 UI
+          updateIdentityUI();
+
+          // 5. 绑定"获取飞书身份"按钮
+          const btn = document.getElementById('btnGetFeishuId');
+          if (btn) {
+            btn.addEventListener('click', startOAuthFlow);
+          }
+        } catch (err) {
+          console.error(err);
+        } 
+      };
+
+      // ========== 任务轮询函数 ==========
+      async function pollTaskStatus(taskId, els, onUpdate, onComplete) {
+        const maxAttempts = 600; // 最多轮询10分钟，6秒间隔
+        let attempts = 0;
+
+        const pollInterval = setInterval(async () => {
+          if (attempts >= maxAttempts) {
+            clearInterval(pollInterval);
+            onComplete(false, "任务超时");
+            return;
+          }
+
+          try {
+            const res = await fetch(`/api/tasks/${taskId}`);
+            if (!res.ok) {
+              clearInterval(pollInterval);
+              onComplete(false, "查询任务失败");
+              return;
+            }
+
+            const data = await res.json();
+            if (!data.success) {
+              clearInterval(pollInterval);
+              onComplete(false, data.error || "任务查询失败");
+              return;
+            }
+
+            const task = data.task;
+
+            // 更新日志
+            if (task.logs.length > 0) {
+              els.log.innerHTML = "";
+              task.logs.forEach((line) => {
+                appendLog(els.log, line);
+              });
+            }
+
+            // 更新进度
+            if (task.progress > 0) {
+              els.bar.style.width = task.progress + "%";
+              els.text.innerText = task.progress.toFixed(1) + "%";
+            }
+
+            // 更新状态
+            if (task.status === "success") {
+              els.bar.style.width = "100%";
+              els.text.innerText = "100%";
+              clearInterval(pollInterval);
+              onComplete(true, task);
+            } else if (task.status === "failed") {
+              els.text.innerText = "执行失败";
+              clearInterval(pollInterval);
+              onComplete(false, task.error_message);
+            }
+          } catch (error) {
+            console.error("轮询错误:", error);
+          }
+
+          attempts++;
+        }, 6000); // 6秒轮询一次
+      }
+
+      const form = document.getElementById("versionForm");
+      const submitBtn = document.getElementById("submitBtn");
+      const modeInput = document.getElementById("mode");
+      const tabVersion = document.getElementById("tabVersion");
+      const tabNasLink = document.getElementById("tabNasLink");
+      const tabLocalUpload = document.getElementById("tabLocalUpload");
+      const oldLocalVersionTag = document.getElementById("oldLocalVersionTag");
+      const newLocalVersionTag = document.getElementById("newLocalVersionTag");
+
+      const MODE_CONFIG = {
+        nas_link: {
+          tab: tabNasLink,
+          panel: document.getElementById("panelNasLink"),
+          progressContainer: document.getElementById("progressContainerNasLink"),
+          progressBar: document.getElementById("progressBarNasLink"),
+          progressText: document.getElementById("progressTextNasLink"),
+          logArea: document.getElementById("logAreaNasLink"),
+          resultBox: document.getElementById("resultLinkBoxNasLink"),
+          resultContainer: document.getElementById("resultLinksNasLink"),
+          buildRequest: () => ({
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mode: "nas_link",
+              oldNasUrl: document.getElementById("oldNasUrl").value.trim(),
+              newNasUrl: document.getElementById("newNasUrl").value.trim(),
+              ...(feishuUserIdentity || {}),
+            }),
+          }),
+          required: () => ["oldNasUrl", "newNasUrl"],
+        },
+        version: {
+          tab: tabVersion,
+          panel: document.getElementById("panelVersion"),
+          progressContainer: document.getElementById("progressContainerVersion"),
+          progressBar: document.getElementById("progressBarVersion"),
+          progressText: document.getElementById("progressTextVersion"),
+          logArea: document.getElementById("logAreaVersion"),
+          resultBox: document.getElementById("resultLinkBoxVersion"),
+          resultContainer: document.getElementById("resultLinksVersion"),
+          buildRequest: () => ({
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mode: "version",
+              projectName: document.getElementById("projectName").value.trim(),
+              baseVersion: document.getElementById("baseVersion").value.trim(),
+              targetVersion: document.getElementById("targetVersion").value.trim(),
+              releaseType: document.getElementById("releaseType").value,
+              ...(feishuUserIdentity || {}),
+            }),
+          }),
+          required: () => [
+            "projectName",
+            "baseVersion",
+            "targetVersion",
+            "releaseType",
+          ],
+        },
+        local_upload: {
+          tab: tabLocalUpload,
+          panel: document.getElementById("panelLocalUpload"),
+          progressContainer: document.getElementById("progressContainerLocalUpload"),
+          progressBar: document.getElementById("progressBarLocalUpload"),
+          progressText: document.getElementById("progressTextLocalUpload"),
+          logArea: document.getElementById("logAreaLocalUpload"),
+          resultBox: document.getElementById("resultLinkBoxLocalUpload"),
+          resultContainer: document.getElementById("resultLinksLocalUpload"),
+          buildRequest: () => {
+            const formData = new FormData();
+            formData.append("mode", "local_upload");
+            formData.append(
+              "oldLocalFile",
+              document.getElementById("oldLocalFile").files[0],
+            );
+            formData.append(
+              "newLocalFile",
+              document.getElementById("newLocalFile").files[0],
+            );
+            // 附带飞书用户身份
+            if (feishuUserIdentity && feishuUserIdentity.open_id) {
+              formData.append("open_id", feishuUserIdentity.open_id);
+              formData.append("receive_id", feishuUserIdentity.receive_id);
+              formData.append("receive_id_type", feishuUserIdentity.receive_id_type);
+            }
+            return {
+              method: "POST",
+              body: formData,
+            };
+          },
+          required: () => ["oldLocalFile", "newLocalFile"],
+        },
+      };
+
+      const MODE_ORDER = ["nas_link", "version", "local_upload"];
+
+      function getModeConfig(mode) {
+        return MODE_CONFIG[mode] || MODE_CONFIG.nas_link;
+      }
+
+      function guessLocalVersionFromFilename(fileName) {
+        const name = (fileName || "").toLowerCase();
+        const match = name.match(/(?:^|[^0-9])(\d+\.\d+\.\d+\.\d+)(?:[^0-9]|$)/);
+        return match ? match[1] : "";
+      }
+
+      function runWhenIdle(callback, delayMs = 1200) {
+        if (window.requestIdleCallback) {
+          return window.requestIdleCallback(callback, { timeout: delayMs });
+        }
+        return window.setTimeout(callback, delayMs);
+      }
+
+      function scheduleLocalVersionInspect(file, targetEl) {
+        if (!file) {
+          targetEl.innerText = "版本: 未解析";
+          return;
+        }
+
+        const quickGuess = guessLocalVersionFromFilename(file.name);
+        targetEl.dataset.inspectToken = String(Date.now()) + Math.random();
+        const inspectToken = targetEl.dataset.inspectToken;
+
+        if (quickGuess) {
+          targetEl.innerText = `版本: ${quickGuess}（文件名猜测）`;
+        } else {
+          targetEl.innerText = "版本: 待空闲解析";
+        }
+
+        runWhenIdle(async () => {
+          if (!targetEl.isConnected || targetEl.dataset.inspectToken !== inspectToken) {
+            return;
+          }
+
+          const fd = new FormData();
+          fd.append("file", file);
+          try {
+            const res = await fetch("/inspect_local_zip_version", {
+              method: "POST",
+              body: fd,
+            });
+            if (!res.ok || targetEl.dataset.inspectToken !== inspectToken) {
+              return;
+            }
+            const data = await res.json();
+            if (targetEl.dataset.inspectToken !== inspectToken) {
+              return;
+            }
+            if (data && data.success && data.version) {
+              const resolvedVersion = String(data.version).trim();
+              if (resolvedVersion) {
+                targetEl.innerText = quickGuess
+                  ? `版本: ${resolvedVersion}（已确认）`
+                  : `版本: ${resolvedVersion}`;
+              } else if (!quickGuess) {
+                targetEl.innerText = "版本: 未识别";
+              }
+            } else if (!quickGuess) {
+              targetEl.innerText = "版本: 未识别";
+            }
+          } catch (_) {
+            if (!quickGuess && targetEl.dataset.inspectToken === inspectToken) {
+              targetEl.innerText = "版本: 解析失败";
+            }
+          }
+        });
+      }
+
+      function getEls(mode) {
+        const config = getModeConfig(mode);
+        return {
+          container: config.progressContainer,
+          bar: config.progressBar,
+          text: config.progressText,
+          log: config.logArea,
+          resultBox: config.resultBox,
+          resultContainer: config.resultContainer,
+        };
+      }
+
+      function displayResultLinks(els, task) {
+        if (!els.resultBox || !els.resultContainer) return;
+        
+        els.resultContainer.innerHTML = "";
+        
+        // 只显示NAS文件名，复制按钮复制NAS分享链接
+        const fileName = task.result_file_name || (task.result_file ? task.result_file.split(/[\\\/]/).pop() : "");
+        const copyValue = task.nas_sharing_url || task.result_file || "";
+        const nasLink = document.createElement("div");
+        nasLink.className = "result-link-item";
+        const label = document.createElement("span");
+        label.className = "result-link-label";
+        label.textContent = "📂 NAS 文件";
+
+        const input = document.createElement("input");
+        input.className = "result-link-input";
+        input.type = "text";
+        input.readOnly = true;
+        input.value = copyValue;
+        input.title = copyValue;
+
+        const filename = document.createElement("span");
+        filename.className = "result-link-value";
+        filename.textContent = fileName || "未生成文件名";
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "result-link-btn";
+        button.textContent = "复制链接";
+
+        const topRow = document.createElement("div");
+        topRow.className = "result-link-top";
+        topRow.appendChild(label);
+        topRow.appendChild(filename);
+
+        const bottomRow = document.createElement("div");
+        bottomRow.className = "result-link-bottom";
+        bottomRow.appendChild(input);
+        bottomRow.appendChild(button);
+
+        nasLink.appendChild(topRow);
+        nasLink.appendChild(bottomRow);
+        els.resultContainer.appendChild(nasLink);
+        
+        // 绑定复制按钮事件
+        els.resultContainer.querySelectorAll(".result-link-btn").forEach(btn => {
+          btn.addEventListener("click", function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const row = this.closest(".result-link-item");
+            const inputEl = row ? row.querySelector(".result-link-input") : null;
+            const copyText = inputEl ? inputEl.value : "";
+
+            selectAndCopyInput(inputEl, copyText).then(() => {
+              const oldText = this.innerText;
+              this.innerText = "已复制";
+              this.classList.add("copied");
+              setTimeout(() => {
+                this.innerText = oldText;
+                this.classList.remove("copied");
+              }, 2000);
+            }).catch(err => {
+              alert("复制失败: " + err);
+            });
+          });
+        });
+        
+        // 显示结果框
+        els.resultBox.classList.add("show");
+      }
+
+      async function selectAndCopyInput(inputEl, text) {
+        const value = (text || "").trim();
+        if (!value) {
+          throw new Error("当前没有可复制的链接");
+        }
+
+        if (inputEl) {
+          inputEl.focus();
+          inputEl.select();
+          try {
+            inputEl.setSelectionRange(0, inputEl.value.length);
+          } catch (_) {}
+        }
+
+        let copied = false;
+        try {
+          copied = document.execCommand("copy");
+        } catch (_) {
+          copied = false;
+        }
+
+        if (copied) {
+          return;
+        }
+
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(value);
+          return;
+        }
+
+        window.prompt("请手动复制以下链接", value);
+        throw new Error("浏览器不支持自动复制，请手动复制");
+      }
+
+      function appendLog(logEl, line) {
+        if (!line.trim()) return;
+        const span = document.createElement("span");
+        span.className = "log-line";
+        if (/❌|\[ERROR\]|\[FATAL\]|失败/.test(line))
+          span.classList.add("log-error");
+        else if (/✅|\[OK\]|差分包位置|完成/.test(line))
+          span.classList.add("log-ok");
+        else if (/\[INFO\]/.test(line)) span.classList.add("log-info");
+        else if (/\[PROGRESS\]|下载进度/.test(line))
+          span.classList.add("log-progress");
+        else if (/项目目录|版本目录|匹配成功|默认使用/.test(line))
+          span.classList.add("log-key");
+        span.textContent = line;
+        logEl.appendChild(span);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function setActiveMode(mode) {
+        const activeConfig = getModeConfig(mode);
+        modeInput.value = mode;
+        MODE_ORDER.forEach((modeName) => {
+          const config = getModeConfig(modeName);
+          const isActive = config === activeConfig;
+          config.tab.classList.toggle("active", isActive);
+          config.panel.classList.toggle("active", isActive);
+        });
+
+        validateForm();
+      }
+
+      function resetModeUi(els) {
+        els.container.classList.remove("show");
+        els.bar.style.width = "0%";
+        els.text.innerText = "0%";
+        els.log.innerHTML = "";
+        if (els.resultBox) {
+          els.resultBox.classList.remove("show");
+        }
+        if (els.resultContainer) {
+          els.resultContainer.innerHTML = "";
+        }
+      }
+
+      function buildTaskRequest(mode) {
+        return {
+          fetchOptions: getModeConfig(mode).buildRequest(),
+        };
+      }
+
+      function submitLocalUploadTask(els) {
+        return new Promise((resolve, reject) => {
+          const formData = new FormData();
+          formData.append("mode", "local_upload");
+          formData.append(
+            "oldLocalFile",
+            document.getElementById("oldLocalFile").files[0],
+          );
+          formData.append(
+            "newLocalFile",
+            document.getElementById("newLocalFile").files[0],
+          );
+          // 附带飞书用户身份
+          if (feishuUserIdentity && feishuUserIdentity.open_id) {
+            formData.append("open_id", feishuUserIdentity.open_id);
+            formData.append("receive_id", feishuUserIdentity.receive_id);
+            formData.append("receive_id_type", feishuUserIdentity.receive_id_type);
+          }
+
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", "/api/tasks", true);
+          xhr.responseType = "json";
+
+          xhr.upload.onprogress = (event) => {
+            if (!event.lengthComputable) {
+              return;
+            }
+            const percent = Math.max(
+              1,
+              Math.min(99, (event.loaded / event.total) * 100),
+            );
+            els.container.classList.add("show");
+            els.bar.style.width = percent + "%";
+            els.text.innerText = percent.toFixed(1) + "%";
+            appendLog(
+              els.log,
+              `[INFO] 正在上传本地总包到服务器... ${percent.toFixed(1)}%\n`,
+            );
+          };
+
+          xhr.onload = () => {
+            const data = xhr.response || JSON.parse(xhr.responseText || "{}");
+            if (xhr.status < 200 || xhr.status >= 300) {
+              reject(new Error("创建任务失败: HTTP " + xhr.status));
+              return;
+            }
+            if (!data || !data.success) {
+              reject(new Error((data && data.error) || "创建任务失败"));
+              return;
+            }
+            resolve(data);
+          };
+
+          xhr.onerror = () => {
+            reject(new Error("上传本地文件失败，请检查网络或文件大小"));
+          };
+
+          xhr.send(formData);
+        });
+      }
+
+      function validateForm() {
+        const config = getModeConfig(modeInput.value);
+        const isValid = config.required().every((fieldId) => {
+          const field = document.getElementById(fieldId);
+          if (!field) {
+            return false;
+          }
+          if (field.type === "file") {
+            return !!field.files[0];
+          }
+          return !!field.value.trim();
+        });
+        submitBtn.disabled = !isValid;
+      }
+
+      tabVersion.addEventListener("click", () => setActiveMode("version"));
+      tabNasLink.addEventListener("click", () => setActiveMode("nas_link"));
+      tabLocalUpload.addEventListener("click", () =>
+        setActiveMode("local_upload"),
+      );
+
+      document
+        .getElementById("projectName")
+        .addEventListener("input", validateForm);
+      document
+        .getElementById("baseVersion")
+        .addEventListener("input", validateForm);
+      document
+        .getElementById("targetVersion")
+        .addEventListener("input", validateForm);
+      document
+        .getElementById("releaseType")
+        .addEventListener("change", validateForm);
+      document
+        .getElementById("oldNasUrl")
+        .addEventListener("input", validateForm);
+      document
+        .getElementById("newNasUrl")
+        .addEventListener("input", validateForm);
+      document
+        .getElementById("oldLocalFile")
+        .addEventListener("change", async (e) => {
+          validateForm();
+          scheduleLocalVersionInspect(e.target.files[0], oldLocalVersionTag);
+        });
+      document
+        .getElementById("newLocalFile")
+        .addEventListener("change", async (e) => {
+          validateForm();
+          scheduleLocalVersionInspect(e.target.files[0], newLocalVersionTag);
+        });
+      validateForm();
+
+      async function submitCurrentTask() {
+        const mode = modeInput.value;
+        const els = getEls(mode);
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "提交任务中...";
+        resetModeUi(els);
+        els.container.classList.add("show");
+        appendLog(els.log, "[INFO] 提交任务中...\n");
+
+        try {
+          const createData =
+            mode === "local_upload"
+              ? await submitLocalUploadTask(els)
+              : await (async () => {
+                  const { fetchOptions } = buildTaskRequest(mode);
+                  const createRes = await fetch("/api/tasks", fetchOptions);
+                  if (!createRes.ok) {
+                    throw new Error("创建任务失败: HTTP " + createRes.status);
+                  }
+                  return await createRes.json();
+                })();
+
+          if (!createData.success) {
+            throw new Error(createData.error || "创建任务失败");
+          }
+
+          const taskId = createData.task_id;
+          els.log.innerHTML = "";
+          appendLog(els.log, `[INFO] 任务 ID: ${taskId}\n`);
+          appendLog(els.log, `[INFO] 实时获取任务状态中...\n\n`);
+
+          submitBtn.innerText = "执行中(请勿关闭)...";
+
+          pollTaskStatus(
+            taskId,
+            els,
+            (percentage) => {
+              void percentage;
+            },
+            (success, resultOrError) => {
+              if (success) {
+                const task = resultOrError;
+                const resultFileName =
+                  task.result_file_name ||
+                  (task.result_file ? task.result_file.split(/[\\\/]/).pop() : "");
+                if (resultFileName) {
+                  appendLog(els.log, `\n[OK] NAS 文件: ${resultFileName}\n`);
+                }
+                if (task.nas_sharing_url) {
+                  appendLog(els.log, `[OK] NAS 分享链接: ${task.nas_sharing_url}\n`);
+                }
+                els.bar.style.width = "100%";
+                els.text.innerText = "100%";
+                displayResultLinks(els, task);
+              } else {
+                appendLog(els.log, `❌ ${resultOrError}\n`);
+              }
+              submitBtn.innerText = "开始生成";
+              validateForm();
+            },
+          );
+        } catch (error) {
+          els.container.classList.add("show");
+          els.text.innerText = "提交失败";
+          appendLog(els.log, `❌ ${error.message}\n`);
+          console.error(error);
+          submitBtn.innerText = "开始生成";
+          validateForm();
+        }
+      }
+
+      submitBtn.addEventListener("click", async () => {
+        await submitCurrentTask();
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+      });
+    </script>
+  </body>
+</html>
