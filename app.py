@@ -15,6 +15,7 @@ import tarfile
 import tempfile
 import struct
 import shutil
+import sqlite3
 from urllib.parse import urlparse, unquote
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -130,6 +131,76 @@ def cleanup_runtime_artifacts(emit=None):
 
 # ========== 异步任务系统 ==========
 
+TASK_HISTORY_DB = "task_history.db"
+
+
+def init_task_history_db():
+    """初始化任务历史数据库（幂等，进程启动时调用）。"""
+    with sqlite3.connect(TASK_HISTORY_DB) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS task_history (
+                task_id TEXT PRIMARY KEY,
+                mode TEXT,
+                status TEXT,
+                progress REAL DEFAULT 0,
+                created_at TEXT,
+                completed_at TEXT,
+                open_id TEXT,
+                receive_id_type TEXT,
+                error_message TEXT,
+                result_file TEXT,
+                nas_sharing_url TEXT,
+                project_name TEXT,
+                old_version TEXT,
+                new_version TEXT
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_task_history_created ON task_history(created_at)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_task_history_status ON task_history(status)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_task_history_project ON task_history(project_name)")
+        # 进程重启导致的中断任务：把残留 running/pending 标记为 failed
+        conn.execute(
+            "UPDATE task_history SET status='failed', "
+            "error_message='进程重启导致任务中断' WHERE status IN ('running','pending')"
+        )
+
+
+def persist_task(task):
+    """将任务 upsert 到 SQLite（每次状态/结果/项目信息变化时调用）。"""
+    try:
+        with sqlite3.connect(TASK_HISTORY_DB) as conn:
+            conn.execute(
+                """
+                INSERT INTO task_history (
+                    task_id, mode, status, progress, created_at, completed_at,
+                    open_id, receive_id_type, error_message, result_file,
+                    nas_sharing_url, project_name, old_version, new_version
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(task_id) DO UPDATE SET
+                    mode=excluded.mode,
+                    status=excluded.status,
+                    progress=excluded.progress,
+                    completed_at=excluded.completed_at,
+                    open_id=excluded.open_id,
+                    receive_id_type=excluded.receive_id_type,
+                    error_message=excluded.error_message,
+                    result_file=excluded.result_file,
+                    nas_sharing_url=excluded.nas_sharing_url,
+                    project_name=excluded.project_name,
+                    old_version=excluded.old_version,
+                    new_version=excluded.new_version
+                """,
+                (
+                    task.task_id, task.mode, task.status.value, task.progress,
+                    task.created_at, task.completed_at, task.open_id, task.receive_id_type,
+                    task.error_message, task.result_file, task.nas_sharing_url,
+                    task.project_name, task.old_version, task.new_version,
+                ),
+            )
+    except Exception:
+        # 持久化失败不应影响主流程
+        pass
+
 class TaskStatus(Enum):
     PENDING = "pending"
     RUNNING = "running"
@@ -209,6 +280,7 @@ class TaskManager:
         with self.lock:
             self.tasks[task_id] = task
             self._prune_tasks_locked()
+        persist_task(task)
         return task
     
     def get_task(self, task_id):
@@ -216,12 +288,16 @@ class TaskManager:
             return self.tasks.get(task_id)
     
     def update_task_status(self, task_id, status):
+        task = None
         with self.lock:
             if task_id in self.tasks:
-                self.tasks[task_id].status = status
+                task = self.tasks[task_id]
+                task.status = status
                 if status in (TaskStatus.SUCCESS, TaskStatus.FAILED):
-                    self.tasks[task_id].completed_at = datetime.now().isoformat()
+                    task.completed_at = datetime.now().isoformat()
                 self._prune_tasks_locked()
+        if task is not None:
+            persist_task(task)
     
     def append_log(self, task_id, line):
         with self.lock:
@@ -240,24 +316,33 @@ class TaskManager:
                 self.tasks[task_id].progress = min(100.0, max(0.0, percentage))
     
     def set_result(self, task_id, result_file, sharing_url='', error=''):
+        task = None
         with self.lock:
             if task_id in self.tasks:
-                self.tasks[task_id].result_file = result_file
-                self.tasks[task_id].nas_sharing_url = sharing_url
-                self.tasks[task_id].error_message = error
+                task = self.tasks[task_id]
+                task.result_file = result_file
+                task.nas_sharing_url = sharing_url
+                task.error_message = error
+        if task is not None:
+            persist_task(task)
     
     def set_project_info(self, task_id, project_name='', old_version='', new_version=''):
         """更新任务的项目名称和版本信息（用于统计）。"""
+        task = None
         with self.lock:
             if task_id in self.tasks:
+                task = self.tasks[task_id]
                 if project_name:
-                    self.tasks[task_id].project_name = project_name
+                    task.project_name = project_name
                 if old_version:
-                    self.tasks[task_id].old_version = old_version
+                    task.old_version = old_version
                 if new_version:
-                    self.tasks[task_id].new_version = new_version
+                    task.new_version = new_version
+        if task is not None:
+            persist_task(task)
 
 task_manager = TaskManager()
+init_task_history_db()
 
 # 尝试导入差分生成函数
 try:
@@ -1989,55 +2074,73 @@ def stats_page():
 @app.route('/api/stats')
 def api_stats():
     """返回差分任务统计数据。
-    
-    聚合内存中所有任务记录，提供：
+
+    从 SQLite 持久化历史聚合（重启不丢），运行中任务状态以内存为准：
     - 总览：总任务数、成功/失败数、成功率
     - 项目排行：各项目差分次数、成功次数
     - 模式分布：version/nas_link/local_upload 的占比
     - 最近任务列表：最近 20 条任务记录
     """
     with task_manager.lock:
-        all_tasks = list(task_manager.tasks.values())
-    
-    total = len(all_tasks)
-    succeeded = sum(1 for t in all_tasks if t.status == TaskStatus.SUCCESS)
-    failed = sum(1 for t in all_tasks if t.status == TaskStatus.FAILED)
-    cancelled = sum(1 for t in all_tasks if t.status == TaskStatus.CANCELLED)
-    running = sum(1 for t in all_tasks if t.status == TaskStatus.RUNNING) 
-    
-    success_rate = round(succeeded / total * 100, 1) if total > 0 else 0
-    
-    # 项目使用统计
+        running_ids = {
+            task_id for task_id, t in task_manager.tasks.items()
+            if t.status in (TaskStatus.RUNNING, TaskStatus.PENDING)
+        }
+
+    try:
+        with sqlite3.connect(TASK_HISTORY_DB) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM task_history ORDER BY created_at DESC"
+            ).fetchall()
+    except Exception:
+        rows = []
+
+    total = len(rows)
+    succeeded = 0
+    failed = 0
+    cancelled = 0
+    running = 0
+
     project_stats = {}
-    for t in all_tasks:
-        if t.status != TaskStatus.SUCCESS:
-            continue
-        pn = t.project_name.strip()
-        if not pn:
-            # 尝试从日志中解析项目名
-            for log_line in t.logs:
-                m = re.search(r'项目名[：:]\s*(\S+)', log_line)
-                if m:
-                    pn = m.group(1)
-                    break
-                m = re.search(r'识别项目名[：:]\s*(\S+)', log_line)
-                if m:
-                    pn = m.group(1)
-                    break
-        if not pn:
-            pn = '未识别'
-        if pn not in project_stats:
-            project_stats[pn] = {'count': 0, 'versions': set()}
-        project_stats[pn]['count'] += 1
-        ver_label = ''
-        if t.old_version and t.new_version:
-            ver_label = f'{t.old_version} → {t.new_version}'
-        elif t.new_version:
-            ver_label = t.new_version
-        if ver_label:
-            project_stats[pn]['versions'].add(ver_label)
-    
-    # 转换为可序列化格式
+    mode_dist = {}
+    recent_tasks = []
+
+    for r in rows:
+        task_id = r['task_id']
+        status = r['status'] or 'pending'
+        # 运行中任务以内存实时状态为准
+        if task_id in running_ids:
+            status = 'running'
+
+        if status == 'success':
+            succeeded += 1
+        elif status == 'failed':
+            failed += 1
+        elif status == 'cancelled':
+            cancelled += 1
+        elif status in ('running', 'pending'):
+            running += 1
+
+        mode_label = {'version': '版本号差分', 'nas_link': 'NAS链接差分', 'local_upload': '本地文件差分'}.get(r['mode'], r['mode'])
+        mode_dist[mode_label] = mode_dist.get(mode_label, 0) + 1
+
+        # 项目使用统计（仅成功任务）
+        if status == 'success':
+            pn = (r['project_name'] or '').strip() or '未识别'
+            if pn not in project_stats:
+                project_stats[pn] = {'count': 0, 'versions': set()}
+            project_stats[pn]['count'] += 1
+            ver_label = ''
+            if r['old_version'] and r['new_version']:
+                ver_label = f"{r['old_version']} → {r['new_version']}"
+            elif r['new_version']:
+                ver_label = r['new_version']
+            if ver_label:
+                project_stats[pn]['versions'].add(ver_label)
+
+    success_rate = round(succeeded / total * 100, 1) if total > 0 else 0
+
     project_ranking = []
     for pn, info in sorted(project_stats.items(), key=lambda x: -x[1]['count']):
         project_ranking.append({
@@ -2045,33 +2148,27 @@ def api_stats():
             'count': info['count'],
             'latest_versions': sorted(info['versions'])[-5:],
         })
-    
-    # 模式分布
-    mode_dist = {}
-    for t in all_tasks:
-        mode_label = {'version': '版本号差分', 'nas_link': 'NAS链接差分', 'local_upload': '本地文件差分'}.get(t.mode, t.mode)
-        mode_dist[mode_label] = mode_dist.get(mode_label, 0) + 1
-    
-    # 最近任务列表
-    recent_tasks = []
-    sorted_tasks = sorted(all_tasks, key=lambda t: t.created_at, reverse=True)[:20]
-    for t in sorted_tasks:
-        pn = t.project_name or '—'
+
+    for r in rows[:20]:
+        task_id = r['task_id']
+        status = r['status'] or 'pending'
+        if task_id in running_ids:
+            status = 'running'
         recent_tasks.append({
-            'task_id': t.task_id,
-            'mode': t.mode,
-            'mode_label': {'version': '版本号', 'nas_link': 'NAS链接', 'local_upload': '本地上传'}.get(t.mode, t.mode),
-            'project_name': pn,
-            'old_version': t.old_version or '—',
-            'new_version': t.new_version or '—',
-            'status': t.status.value,
+            'task_id': task_id,
+            'mode': r['mode'],
+            'mode_label': {'version': '版本号', 'nas_link': 'NAS链接', 'local_upload': '本地上传'}.get(r['mode'], r['mode']),
+            'project_name': r['project_name'] or '—',
+            'old_version': r['old_version'] or '—',
+            'new_version': r['new_version'] or '—',
+            'status': status,
             'status_label': {
                 'pending': '等待中', 'running': '执行中', 'success': '成功', 'failed': '失败', 'cancelled': '已取消'
-            }.get(t.status.value, t.status.value),
-            'created_at': t.created_at,
-            'open_id': t.open_id[:8] + '...' if t.open_id else '—',
+            }.get(status, status),
+            'created_at': r['created_at'],
+            'open_id': (r['open_id'][:8] + '...') if r['open_id'] else '—',
         })
-    
+
     return jsonify({
         'success': True,
         'data': {
