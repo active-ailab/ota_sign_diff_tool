@@ -46,3 +46,6 @@ downloads
 
 # Mermaid CLI outputs
 diagrams/out/
+
+# WorkBuddy 项目本地数据（记忆/日志，非代码，勿提交）
+.workbuddy/
