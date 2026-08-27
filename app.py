@@ -1512,7 +1512,8 @@ def execute_nas_link_diff_task(task_id, old_url, new_url):
         extracted_project_name = infer_project_name_from_name(old_ota_path.name)
         if extracted_project_name == 'naslink':
             extracted_project_name = infer_project_name_from_name(new_ota_path.name)
-        if extracted_project_name != 'naslink' and extracted_project_name != project_name:
+        # 仅在项目名尚未识别时才用 ota_sign 里的芯片名兜底，避免覆盖 archive 总包/URL 推断出的正确项目名（如 pike）
+        if extracted_project_name != 'naslink' and project_name in ('naslink', 'localupload'):
             emit(f"[INFO] 已根据提取出的总包名称识别项目名: {extracted_project_name}\n")
             project_name = extracted_project_name
         
@@ -2373,7 +2374,8 @@ def generate():
                     extracted_project_name = infer_project_name_from_name(old_ota_path.name)
                     if extracted_project_name == 'naslink':
                         extracted_project_name = infer_project_name_from_name(new_ota_path.name)
-                    if extracted_project_name != 'naslink' and extracted_project_name != project_name:
+                    # 仅在项目名尚未识别时才用 ota_sign 里的芯片名兜底，避免覆盖 archive 总包/URL 推断出的正确项目名（如 pike）
+                    if extracted_project_name != 'naslink' and project_name in ('naslink', 'localupload'):
                         yield emit(f"[INFO] 已根据提取出的总包名称识别项目名: {extracted_project_name}\n")
                         project_name = extracted_project_name
                 except Exception as e:
