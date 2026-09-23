@@ -762,10 +762,54 @@ def _get_shared_archive_filename(session: requests.Session, base: str, token: st
 
 def _dsm_login(session: requests.Session, base: str, username: str, password: str, verify_tls: bool = False, emit=None) -> bool:
     """用 DSM 账号登录（SYNO.API.Auth），成功后把 sid 写入 session 的 cookie，供后续下载 /fsdownload 时认证。
-    返回是否登录成功。DSM 7 用 version=6，回退 version=3（DSM 6）。"""
-    for version in ('6', '3'):
+    返回是否登录成功。
+
+    关键：DSM 7.2+ 把 SYNO.API.Auth 的 path 从 entry.cgi 改成了 auth.cgi，
+    若仍用 entry.cgi 调用会返回 code 102（API 不存在）。
+    因此先通过 SYNO.API.Info 动态查询真实 path 与 maxVersion，再按其登录；
+    查询失败则回退 auth.cgi / entry.cgi 的常用组合。"""
+    # 账号/密码/OTP 等错误（非端点问题），继续换端点重试也无意义，直接判失败
+    _AUTH_FATAL_CODES = {400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411}
+
+    # 1) 动态查询 SYNO.API.Auth 的真实 path 与 maxVersion
+    auth_path = None
+    max_ver = None
+    try:
+        info_url = f"{base}/webapi/query.cgi"
+        info_params = {
+            'api': 'SYNO.API.Info',
+            'version': '1',
+            'method': 'query',
+            'query': 'SYNO.API.Auth',
+        }
+        r = session.get(info_url, params=info_params, verify=verify_tls, timeout=30)
+        if r.status_code == 200:
+            info_data = r.json()
+            if info_data.get('success'):
+                info = (info_data.get('data') or {}).get('SYNO.API.Auth') or {}
+                auth_path = info.get('path')
+                max_ver = info.get('maxVersion')
+                if emit:
+                    emit(f"[INFO] SYNO.API.Auth 查询结果: path={auth_path}, maxVersion={max_ver}\n")
+    except Exception as e:
+        if emit:
+            emit(f"[WARN] 查询 SYNO.API.Info 失败: {e}\n")
+
+    # 2) 构造候选 (path, version) 组合，去重后依次尝试
+    candidates = []
+    if auth_path:
+        for v in (max_ver, 6, 3):
+            if v:
+                candidates.append((auth_path, v))
+    candidates += [('auth.cgi', 6), ('auth.cgi', 3), ('entry.cgi', 6), ('entry.cgi', 3)]
+
+    seen = set()
+    for path, version in candidates:
+        if (path, version) in seen:
+            continue
+        seen.add((path, version))
         try:
-            login_url = f"{base}/webapi/entry.cgi"
+            login_url = f"{base}/webapi/{path}"
             params = {
                 'api': 'SYNO.API.Auth',
                 'version': version,
@@ -773,6 +817,7 @@ def _dsm_login(session: requests.Session, base: str, username: str, password: st
                 'account': username,
                 'passwd': password,
                 'format': 'sid',
+                'session': 'FileStation',
                 'enable_syno_token': 'yes',
             }
             resp = session.get(login_url, params=params, verify=verify_tls, timeout=30)
@@ -783,8 +828,12 @@ def _dsm_login(session: requests.Session, base: str, username: str, password: st
             except Exception:
                 data = {}
             if not data.get('success'):
+                err = data.get('error')
+                code = err.get('code') if isinstance(err, dict) else None
                 if emit:
-                    emit(f"[WARN] DSM 登录(version={version})失败: {data.get('error')}\n")
+                    emit(f"[WARN] DSM 登录({path}, v{version})失败: {err}\n")
+                if code in _AUTH_FATAL_CODES:
+                    return False
                 continue
             d = data.get('data') or {}
             sid = d.get('sid')
@@ -801,7 +850,7 @@ def _dsm_login(session: requests.Session, base: str, username: str, password: st
             return True
         except Exception as e:
             if emit:
-                emit(f"[WARN] DSM 登录(version={version})异常: {e}\n")
+                emit(f"[WARN] DSM 登录({path}, v{version})异常: {e}\n")
             continue
     return False
 
