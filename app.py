@@ -855,6 +855,56 @@ def _dsm_login(session: requests.Session, base: str, username: str, password: st
     return False
 
 
+def _establish_sharing_session(session: requests.Session, base: str, token: str, sharing_url: str, verify_tls: bool = False, emit=None) -> bool:
+    """建立分享会话，获取 sharing_sid cookie。
+
+    关键：/fsdownload/ 下载认证靠的是 sharing_sid（分享会话 cookie），
+    而不是 DSM 账号登录的 id cookie（后者只用于访问"仅账户可访问"的分享页）。
+    模拟浏览器流程：1) 带 DSM cookie 访问分享页（服务器可能自动 Set-Cookie sharing_sid）
+                    2) 若未拿到，显式调用 SYNO.Core.Sharing.Login 建立分享会话
+    """
+    def _has_sharing_sid():
+        return any(c.name == 'sharing_sid' for c in session.cookies)
+
+    # 1) 访问分享页（模拟浏览器打开链接）
+    try:
+        session.get(sharing_url, verify=verify_tls, timeout=30)
+    except Exception as e:
+        if emit:
+            emit(f"[WARN] 访问分享页失败: {e}\n")
+
+    if _has_sharing_sid():
+        if emit:
+            emit("[INFO] 已获取分享会话 cookie（sharing_sid）\n")
+        return True
+
+    # 2) 显式分享登录（无密码分享不传 password；sharing_id 需带双引号）
+    try:
+        login_url = f"{base}/sharing/webapi/entry.cgi"
+        data = {
+            'api': 'SYNO.Core.Sharing.Login',
+            'method': 'login',
+            'version': '1',
+            'sharing_id': f'"{token}"',
+        }
+        resp = session.post(login_url, data=data, verify=verify_tls, timeout=30)
+        if resp.status_code == 200:
+            try:
+                result = resp.json()
+            except Exception:
+                result = {}
+            if result.get('success') and _has_sharing_sid():
+                if emit:
+                    emit("[INFO] 分享会话登录成功（sharing_sid）\n")
+                return True
+            if emit:
+                emit(f"[WARN] 分享会话登录未成功: {result.get('error')}\n")
+    except Exception as e:
+        if emit:
+            emit(f"[WARN] 分享会话登录异常: {e}\n")
+    return False
+
+
 def get_nas_sharing_info(sharing_url: str, nas_address: str, username: str, password: str, verify_tls: bool = False, emit=None):
     """
     仅通过分享页 URL 自动拿下载地址：
@@ -880,6 +930,14 @@ def get_nas_sharing_info(sharing_url: str, nas_address: str, username: str, pass
         except Exception as e:
             if emit:
                 emit(f"[WARN] NAS 登录跳过（公开分享无需登录）: {e}\n")
+
+    # 建立分享会话（拿 sharing_sid cookie）：/fsdownload/ 下载认证靠它，
+    # DSM 登录的 id cookie 只解决"能打开分享页"。
+    try:
+        _establish_sharing_session(session, base, token, sharing_url, verify_tls=verify_tls, emit=emit)
+    except Exception as e:
+        if emit:
+            emit(f"[WARN] 分享会话建立失败: {e}\n")
 
     filename = None
     try:
@@ -1131,11 +1189,17 @@ def download_with_progress(url: str, dst_path: Path, emit, auth=None, verify_tls
 
         ctype = (resp.headers.get('content-type') or '').lower()
         if 'text/html' in ctype:
+            body_snippet = ""
+            try:
+                body_snippet = (resp.text or "")[:800]
+            except Exception:
+                pass
             token_match = re.search(r"/sharing/([^/?#]+)", url)
             token_tip = token_match.group(1) if token_match else "<token>"
             raise RuntimeError(
                 "下载链接返回的是 HTML 网页而不是文件（API 解析或链接格式可能有问题）。"
                 f"若要使用直链，格式应为: https://{nas_address or '10.2.100.85:5001'}/fsdownload/{token_tip}/<文件名>"
+                f"\n[响应内容前800字符] {body_snippet}"
             )
 
         real_filename = _extract_filename_from_response(resp, real_url)
