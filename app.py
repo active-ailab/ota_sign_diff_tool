@@ -748,7 +748,7 @@ def _get_shared_archive_filename(session: requests.Session, base: str, token: st
         'api': 'SYNO.Core.Sharing.Session',
         'version': '1',
         'method': 'get',
-        'sharing_id': token,
+        'sharing_id': f'"{token}"',
     }
     resp = session.get(url, params=params, verify=verify_tls, timeout=30)
     if resp.status_code != 200:
@@ -760,12 +760,61 @@ def _get_shared_archive_filename(session: requests.Session, base: str, token: st
     return filename
 
 
+def _dsm_login(session: requests.Session, base: str, username: str, password: str, verify_tls: bool = False, emit=None) -> bool:
+    """用 DSM 账号登录（SYNO.API.Auth），成功后把 sid 写入 session 的 cookie，供后续下载 /fsdownload 时认证。
+    返回是否登录成功。DSM 7 用 version=6，回退 version=3（DSM 6）。"""
+    for version in ('6', '3'):
+        try:
+            login_url = f"{base}/webapi/entry.cgi"
+            params = {
+                'api': 'SYNO.API.Auth',
+                'version': version,
+                'method': 'login',
+                'account': username,
+                'passwd': password,
+                'format': 'sid',
+                'enable_syno_token': 'yes',
+            }
+            resp = session.get(login_url, params=params, verify=verify_tls, timeout=30)
+            if resp.status_code != 200:
+                continue
+            try:
+                data = resp.json()
+            except Exception:
+                data = {}
+            if not data.get('success'):
+                if emit:
+                    emit(f"[WARN] DSM 登录(version={version})失败: {data.get('error')}\n")
+                continue
+            d = data.get('data') or {}
+            sid = d.get('sid')
+            if not sid:
+                continue
+            # 以 cookie id=<sid> 方式携带（下载 /fsdownload 时作为认证凭据）
+            host = urlparse(base).hostname or ''
+            session.cookies.set('id', sid, domain=host, path='/')
+            synotoken = d.get('synotoken')
+            if synotoken:
+                session.headers['X-SYNO-TOKEN'] = synotoken
+            if emit:
+                emit(f"[INFO] DSM 账号登录成功（{username}），已获取 sid\n")
+            return True
+        except Exception as e:
+            if emit:
+                emit(f"[WARN] DSM 登录(version={version})异常: {e}\n")
+            continue
+    return False
+
+
 def get_nas_sharing_info(sharing_url: str, nas_address: str, username: str, password: str, verify_tls: bool = False, emit=None):
     """
     仅通过分享页 URL 自动拿下载地址：
-    1) 调用 SYNO.Core.Sharing.Login 获取 sharing_sid（cookie）
-    2) 使用 /fsdownload/<token>/ 直接下载（不需要文件名）
+    1) （可选，仅"账户可访问"分享）用 DSM 账号登录（SYNO.API.Auth）获取 sid
+    2) 使用 /fsdownload/<token>/ 直接下载（公开分享无需登录、也无需文件名）
     返回 (direct_url, session)
+
+    注意：群晖 Sharing 接口要求 sharing_id 为带双引号的 JSON 字符串（如 "WE7nXG8CF"），
+    裸字符串会被判定为 type 类型错误（code 120）。
     """
     _ = nas_address  # 兼容旧参数
     token = _extract_sharing_token(sharing_url)
@@ -774,30 +823,14 @@ def get_nas_sharing_info(sharing_url: str, nas_address: str, username: str, pass
 
     session = requests.Session()
 
+    # 用 DSM 账号登录（尽力而为）：分享为"仅账户可访问"时需先登录 DSM 拿到 sid；
+    # 公开分享无需登录，登录失败也不影响，直接回退免登录直链。
     if username and password:
-        login_url = f"{base}/sharing/webapi/entry.cgi"
-        params = {
-            'api': 'SYNO.Core.Sharing.Login',
-            'version': '1',
-            'method': 'login',
-            'sharing_id': token,
-            'username': username,
-            'passwd': password,
-        }
-        resp = session.get(login_url, params=params, verify=verify_tls, timeout=30)
-        if resp.status_code != 200:
-            raise RuntimeError(f"NAS 分享登录失败，状态码: {resp.status_code}")
-
         try:
-            data = resp.json()
+            _dsm_login(session, base, username, password, verify_tls=verify_tls, emit=emit)
         except Exception as e:
-            raise RuntimeError(f"NAS 分享登录响应不是 JSON: {resp.text[:300]}") from e
-
-        if not data.get('success'):
-            raise RuntimeError(f"NAS 分享登录失败: {data.get('error')}")
-
-        if emit:
-            emit("[INFO] NAS 分享登录成功，已获取 sharing_sid\n")
+            if emit:
+                emit(f"[WARN] NAS 登录跳过（公开分享无需登录）: {e}\n")
 
     filename = None
     try:
