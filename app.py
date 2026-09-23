@@ -46,6 +46,17 @@ OTA_SIGN_ZIP_NAME_RE = re.compile(r'^watch@[^/\\]+_ota_sign\.zip$', re.IGNORECAS
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
+def _project_temp_dir() -> Path:
+    """返回项目内临时目录，避免依赖系统 TEMP 环境变量。
+
+    通过 Git Bash(MSYS2) 启动时，TEMP 会被映射成会话级临时目录，
+    该目录可能被清理，导致 tempfile 缓存失效路径后报 WinError 3。
+    """
+    root = Path(__file__).resolve().parent / "work" / "tmp"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
 def _collect_candidates(root: Path, recurse: bool, only_files: bool, only_dirs: bool, name_re: str = None):
     if not root.exists():
         return []
@@ -107,6 +118,14 @@ def cleanup_runtime_artifacts(emit=None):
         recurse=True,
         only_dirs=True,
         name_re=r"^(nas_link|local_upload)_",
+        emit=emit,
+    )
+
+    # 项目内临时目录（tempfile 兜底目录）
+    removed_total += _prune_old_entries(
+        Path("work") / "tmp",
+        keep_count,
+        only_dirs=True,
         emit=emit,
     )
 
@@ -1203,7 +1222,7 @@ def maybe_extract_ota_sign(input_path: Path, emit) -> Path:
         safe_stem = re.sub(r'[^A-Za-z0-9._@\-]', '_', source_stem).strip('._') or base_input.stem
         return base_input.with_name(f"{safe_stem}_ota_sign.zip")
 
-    with tempfile.TemporaryDirectory(prefix='nas_link_unpack_') as temp_dir:
+    with tempfile.TemporaryDirectory(prefix='nas_link_unpack_', dir=str(_project_temp_dir())) as temp_dir:
         temp_root = Path(temp_dir)
         queue = [input_path]
         seen = set()
@@ -2535,7 +2554,7 @@ def inspect_local_zip_version():
         return jsonify({"success": False, "message": "未收到文件"}), 400
 
     try:
-        with tempfile.TemporaryDirectory(prefix='ota_version_probe_') as temp_dir:
+        with tempfile.TemporaryDirectory(prefix='ota_version_probe_', dir=str(_project_temp_dir())) as temp_dir:
             temp_root = Path(temp_dir)
             raw_name = Path(upload.filename or 'upload.pkg').name
             safe_name = re.sub(r"[^A-Za-z0-9._@\-]", "_", raw_name) or 'upload.pkg'
